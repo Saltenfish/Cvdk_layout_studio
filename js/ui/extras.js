@@ -61,3 +61,54 @@ $('#btnSqueeze').addEventListener('click',()=>{
   if(!n){ toast('沒有連續的空白行'); return; }
   pushUndo(); codeEl.value=out; parseAndRender(); toast('<b>已壓縮</b> '+n+' 處連續空白行');
 });
+
+/* ═══════════ 29. v3.8：手機版（≤760px）═══════════ */
+const MQ_MOBILE=matchMedia('(max-width:760px)');
+const TOUCH_UI=matchMedia('(hover:none)').matches||('ontouchstart' in window);
+document.documentElement.classList.toggle('touchUI',TOUCH_UI);
+/* 面板標題加關閉鈕（手機的面板是從下面拉起的） */
+{ const h=document.querySelector('#side .drawerHead'); if(h){ const x=document.createElement('button'); x.type='button'; x.className='sheetX'; x.title='關閉'; x.textContent='✕'; x.addEventListener('click',()=>setDrawer(false)); h.appendChild(x); } }
+/* 觸控：清單項目不做拖曳（讓手指可以捲動），改用「點開→插入」 */
+{ const _hd=startHtmlDrag; startHtmlDrag=function(ev,spec){ if(ev.pointerType==='touch') return; return _hd(ev,spec); }; }
+{ const _ad=startAssetDrag; startAssetDrag=function(ev,url,idx){ if(ev.pointerType==='touch'){ selAsset=idx; renderAssets(); buildFormGrid(); return; } return _ad(ev,url,idx); }; }
+/* 觸控：在預覽裡點選、拖曳圖層、拖控制點縮放／旋轉、點兩下改字 */
+(function(){
+  let tAct=null, lastTap={t:0,el:null};
+  const fire=(type,target,t)=>target.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,clientX:t.clientX,clientY:t.clientY,button:0,buttons:type==='mouseup'?0:1,view:window}));
+  const zone=el=>el&&el.closest&&(el.closest('#pv')||el.closest('#ovl .h')||el.closest('#ovl .rot'));
+  document.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||editingText) return;
+    const t=e.touches[0], el=e.target;
+    if(!zone(el)||el.closest('[contenteditable=true]')) return;
+    tAct={el,sx:t.clientX,sy:t.clientY,moved:false,handle:!!el.closest('#ovl')};
+    fire('mousedown',el,t);
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!tAct) return;
+    const t=e.touches[0];
+    if(Math.abs(t.clientX-tAct.sx)+Math.abs(t.clientY-tAct.sy)>6) tAct.moved=true;
+    // 拖的是畫布圖層或控制點 → 擋掉捲動；一般區塊 → 讓畫面照常捲動
+    const dragging=tAct.handle||(typeof act!=='undefined'&&act&&(act.moveUid!=null||act.mode==='resize'||act.mode==='rotate'));
+    if(dragging){ e.preventDefault(); fire('mousemove',document,t); }
+  },{passive:false});
+  const end=e=>{
+    if(!tAct) return;
+    const t=e.changedTouches[0], a=tAct; tAct=null;
+    fire('mouseup',document,t);
+    if(e.cancelable) e.preventDefault();          // 不要再多送一次滑鼠事件
+    if(!a.moved&&!a.handle){
+      const now=Date.now();
+      if(now-lastTap.t<380&&lastTap.el===a.el){ fire('dblclick',a.el,t); lastTap={t:0,el:null}; }
+      else lastTap={t:now,el:a.el};
+    }
+  };
+  document.addEventListener('touchend',end,{passive:false});
+  document.addEventListener('touchcancel',()=>{ if(tAct){ tAct=null; document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); } });
+})();
+/* 手機：一開始先看預覽（面板收起）、預覽寬度用滿版 */
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!MQ_MOBILE.matches) return;
+  setDrawer(false);
+  if(!load('cdb3_w_m')){ setWidth('full'); store('cdb3_w_m','1'); }
+});
+MQ_MOBILE.addEventListener('change',()=>requestAnimationFrame(positionOverlay));
