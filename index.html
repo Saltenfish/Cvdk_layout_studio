@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CaveDuck 排版室</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" data-app href="css/app.css">
+<link rel="stylesheet" data-app href="css/preview.css">
+<link rel="stylesheet" data-app href="css/animate.min.css">
+</head>
+<body>
+<div id="app" data-mode="info">
+
+  <header id="top">
+    <div class="brand"><span class="logo">CaveDuck 排版室</span></div>
+    <nav id="modeTabs" title="三個頁面各自獨立：code、復原紀錄、存檔都分開（Alt+1/2/3 切換）">
+      <button data-mode="info" class="on"><span class="mi">🪪</span><span class="mt">角色介面</span><span class="mc" id="mcInfo"></span></button>
+      <button data-mode="chat"><span class="mi">💬</span><span class="mt">聊天室</span><span class="mc" id="mcChat"></span></button>
+      <button data-mode="widget"><span class="mi">📊</span><span class="mt">小工具</span><span class="mc" id="mcWidget"></span></button>
+    </nav>
+    <div class="tools">
+      <a class="tbtn" id="btnRef" href="https://saltenfish.github.io/Cvdk_black-whitelist_v2/index.html" target="_blank" rel="noopener" title="開新分頁查詢三個地方的黑白名單（會帶上目前的語言和深淺）">📖 黑白名單查詢</a>
+      <select class="tin" id="langSel" title="介面語言"><option value="zh">中文</option><option value="en">English</option><option value="ko">한국어</option><option value="ja">日本語</option></select>
+      <div class="seg" id="segTheme" title="整個工作台的深淺（預覽內容不受影響）">
+        <button data-theme="dark" class="on">🌙 深</button><button data-theme="light">☀ 淺</button>
+      </div>
+      <span class="tsep"></span>
+      <button class="tbtn icon" id="btnUndo" title="復原（Ctrl+Z）">↩</button>
+      <button class="tbtn icon" id="btnRedo" title="重做（Ctrl+Y）">↪</button>
+      <button class="tbtn gold" id="btnCopyAll" title="複製全部 code">⧉<span class="lg"> 複製全部 code</span></button>
+    </div>
+  </header>
+
+  <div id="main">
+    <nav id="tabs">
+      <button data-tab="props" class="on" title="調整選取的元素"><span class="dot"></span><span class="ri">✎</span>屬性</button>
+      <div class="rsep"></div>
+      <button data-tab="parts" title="新增元素與成套部件（可以直接拖到預覽）"><span class="ri">✚</span>新增</button>
+      <button data-tab="img" title="圖片素材庫"><span class="ri">🖼</span>圖片</button>
+      <button data-tab="deco" title="裝飾庫"><span class="ri">✦</span>裝飾</button>
+      <button data-tab="mine" title="我的常用設定"><span class="ri">⭐</span>常用</button>
+      <button data-tab="tpl" class="wOnly" title="小工具完整模板"><span class="ri">📋</span>模板</button>
+      <button data-tab="conv" title="一般 div ⇄ 畫布 轉換"><span class="ri">⇄</span>轉換</button>
+      <div class="rsep"></div>
+      <button data-tab="tree" title="頁面結構"><span class="ri">☰</span>圖層</button>
+      <button data-tab="save" title="存檔（每個頁面各自一份）"><span class="ri">💾</span>存檔</button>
+      <div class="rsp"></div>
+      <button id="btnDrawer" title="收合／展開左邊面板"><span class="ri" id="drawerIco">⟨</span>收合</button>
+    </nav>
+
+    <aside id="side">
+      <div class="drawerHead"><b id="drawerTitle">屬性</b><span class="dsub" id="drawerSub">點選預覽中的元素</span></div>
+      <div class="pane on" id="pane-props">
+      <div id="props">
+        <div id="propsEmpty">
+          <div class="emptyIco">☝</div>
+          在預覽裡點一下任何區塊<br>這裡就會出現它的所有設定
+          <div class="tips">
+            <b>單擊</b>　選取<br>
+            <b>雙擊</b>　直接改字（反白可單獨調）<br>
+            <b>拖外框</b>　移動畫布裡的圖層<br>
+            <b>拖角落</b>　縮放・<b>上方圓點</b>　旋轉<br>
+            <b>Delete</b>　刪除・<b>Ctrl+C</b>　複製區塊
+          </div>
+        </div>
+        <div id="propsBody">
+          <div id="propsHead">
+            <div class="selRow"><span id="selTag">div</span><span id="selLabel"></span><span class="typeBadge" id="propsSub"></span></div>
+            <div class="frow2" id="imgSrcRow" style="display:none"><span class="lab" id="imgSrcLab">圖片網址</span><input class="tin" id="inImgSrc" spellcheck="false" placeholder="https://…"></div>
+            <button class="bigbtn" id="pbToCanvas" title="把這個區塊變成畫布：裡面的元素會依現在位置變成可自由拖曳的圖層">▣ 轉為畫布 <small>裡面變成可自由拖曳的圖層</small></button>
+            <div class="cvBadge" id="cvBadge">⬒ 這是畫布：拖進來的東西都會變成圖層</div>
+            <div class="actGrid">
+              <button class="mbtn" id="pbSelectCode" title="打開 code 並選取這段（可 Ctrl+C）">&lt;/&gt; 看code</button>
+              <button class="mbtn" id="pbCopy" title="複製這個區塊的 code">⧉ 複製</button>
+              <button class="mbtn" id="pbDup" title="原地複製一份">＋ 再一份</button>
+              <button class="mbtn danger" id="pbDel" title="刪除（Delete）">✕ 刪除</button>
+            </div>
+            <div class="segfull" id="stackRow" title="畫布裡的前後疊層">
+              <span class="seglab">疊層</span>
+              <button id="stBack">最後</button><button id="stDn">往後</button><button id="stUp">往前</button><button id="stFront">最前</button>
+            </div>
+          </div>
+
+          <details class="ps" data-g="box"><summary><span class="si">📐</span>位置與大小<span class="sv" id="svBox"></span></summary><div class="psb">
+            <div id="posGroup">
+              <div id="dragHint">✦ 這是圖層：直接在預覽裡拖曳、拖角落縮放</div>
+              <div class="fgrid">
+                <label class="fld"><span>左 left</span><input class="tin" id="inLeft" placeholder="10%"></label>
+                <label class="fld"><span>上 top</span><input class="tin" id="inTop" placeholder="10%"></label>
+              </div>
+            </div>
+            <div class="fgrid">
+              <label class="fld"><span>寬 width</span><input class="tin" id="inW" placeholder="100% / 200px"></label>
+              <label class="fld"><span>高 height</span><input class="tin" id="inH" placeholder="auto"></label>
+              <label class="fld"><span>外距 margin</span><input class="tin" id="inMargin" placeholder="0 auto"></label>
+              <label class="fld"><span>內距 padding</span><input class="tin" id="inPadding" placeholder="24px"></label>
+            </div>
+          </div></details>
+
+          <details class="ps" data-g="text"><summary><span class="si">🅣</span>文字<span class="sv" id="svText"></span></summary><div class="psb">
+            <div class="fgrid">
+              <label class="fld"><span>字級</span><input class="tin" id="inFs" placeholder="15px"></label>
+              <label class="fld"><span>粗細</span><select class="tin" id="inFw"><option value="">預設</option><option value="400">400 一般</option><option value="700">700 粗</option><option value="900">900 特粗</option></select></label>
+              <label class="fld"><span>字距</span><input class="tin" id="inLs" placeholder="2px"></label>
+              <label class="fld"><span>行高</span><input class="tin" id="inLh" placeholder="1.8"></label>
+            </div>
+            <div class="segfull" id="segAlign"><span class="seglab">對齊</span><button data-al="left">靠左</button><button data-al="center">置中</button><button data-al="right">靠右</button><button data-al="">清除</button></div>
+          </div></details>
+
+          <details class="ps" data-g="color" id="psColor"><summary><span class="si">🎨</span>顏色<span class="sv" id="svColor"></span></summary><div class="psb">
+            <div class="segfull" id="colTarget">
+              <button data-p="color" class="on"><i><b id="ctText"></b></i>文字</button>
+              <button data-p="background"><i><b id="ctBg"></b></i>背景</button>
+              <button data-p="border-color"><i><b id="ctBd"></b></i>邊框</button>
+            </div>
+            <div class="cpick">
+              <input type="color" id="colMain" value="#f0b03c" title="點我開啟拾色器">
+              <div class="cside">
+                <input class="tin" id="colHex" value="#f0b03c" spellcheck="false" title="輸入色碼後按 Enter 套用">
+                <div class="alphaRow"><input type="range" id="colAlpha" min="0" max="100" value="100" title="透明度"><span id="colAlphaVal">100%</span></div>
+              </div>
+            </div>
+            <div class="cbtns">
+              <button class="mbtn solid" id="colApplyGo">套用到文字</button>
+              <button class="mbtn" id="colClearGo" title="移除這個顏色設定">清除</button>
+              <button class="mbtn" id="colCopy" title="複製色碼">複製</button>
+            </div>
+            <div class="sublab">📌 釘選<button class="mini" id="colAddPin">＋ 釘選目前色</button></div>
+            <div class="swatchGrid" id="pinnedColors"></div>
+            <div class="sublab">最近使用<button class="mini" id="colClearRecent">清除</button></div>
+            <div class="swatchGrid" id="recentColors"></div>
+            <div class="sublab">常用色票<button class="mini" id="colAddFav">＋ 加入</button><button class="mini" id="colClearFav" style="margin-left:4px">清除</button></div>
+            <div class="swatchGrid" id="swatches"></div>
+            <div class="hint" style="margin-top:6px">點色塊＝直接套用；右鍵＝從清單移除</div>
+            <div class="rawRow" id="rawText"><div class="sublab" style="margin-top:4px">文字色原始值</div><input class="tin" id="inColor" placeholder="#f0b03c" spellcheck="false" style="width:100%"></div>
+            <div class="rawRow" id="rawBg" style="display:none"><div class="sublab" style="margin-top:4px">背景原始值（可貼漸層）</div><input class="tin" id="inBg" placeholder="#0a0a0d 或 linear-gradient(...)" spellcheck="false" style="width:100%"></div>
+            <div id="decoColorGrp" style="display:none">
+              <div class="sublab">背景／漸層／花紋裡的顏色（點一下換）</div>
+              <div id="decoColorList" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+            </div>
+            <div style="display:none"><span id="colOut"></span><div id="colPrev"><div></div></div><button id="colApplyText"></button><button id="colApplyBg"></button><button id="colApplyBd"></button></div>
+          </div></details>
+
+          <details class="ps" data-g="look"><summary><span class="si">◐</span>外觀<span class="sv" id="svLook"></span></summary><div class="psb">
+            <div class="frow2"><span class="lab">邊框</span><input class="tin" id="inBorder" placeholder="1px solid #b8943f"></div>
+            <div class="frow2"><span class="lab">圓角</span><input type="range" id="inRadiusR" min="0" max="150" value="0"><input type="number" class="snum" id="nRadius" min="0" max="300" value="0"><select class="tin" id="radiusUnit" style="flex:0 0 52px;padding:5px 4px"><option value="px">px</option><option value="%">%</option></select><button class="mbtn" id="radius4Toggle" style="flex:0 0 auto;padding:5px 7px" title="分別調四個角">四角</button></div>
+            <div class="frow2" id="radius4Row" style="display:none">
+              <input type="number" class="snum" id="rTL" placeholder="↖" title="左上"><input type="number" class="snum" id="rTR" placeholder="↗" title="右上"><input type="number" class="snum" id="rBR" placeholder="↘" title="右下"><input type="number" class="snum" id="rBL" placeholder="↙" title="左下">
+            </div>
+            <div class="frow2"><span class="lab">透明度</span><input type="range" id="inOpacity" min="0" max="100" value="100"><input type="number" class="snum" id="nOpacity" min="0" max="100" value="100"><span class="sunit">%</span></div>
+            <div class="frow2"><span class="lab">旋轉</span><input type="range" id="inRotate" min="-180" max="180" value="0"><input type="number" class="snum" id="nRotate" min="-180" max="180" value="0"><span class="sunit">°</span></div>
+            <div class="frow2"><span class="lab">縮放</span><input type="range" id="inScale" min="20" max="300" value="100"><input type="number" class="snum" id="nScale" min="20" max="300" value="100"><span class="sunit">%</span></div>
+          </div></details>
+
+          <details class="ps" data-g="anim"><summary><span class="si">✺</span>動畫<span class="sv" id="svAnim"></span></summary><div class="psb">
+            <div class="animNow"><span>目前：</span><b id="animNowName">無</b><button class="mbtn" id="inAnimClear">移除</button></div>
+            <div class="animOpts">
+              <label class="fld"><span>速度</span><select class="tin" id="inAnimSpeed"><option value="">1 秒</option><option value="animate__slow">2 秒</option><option value="animate__slower">3 秒</option><option value="animate__fast">0.8 秒</option><option value="animate__faster">0.5 秒</option></select></label>
+              <label class="fld"><span>延遲（秒）</span><input class="tin" id="animDelay" type="number" min="0" step="0.1" value="0"></label>
+              <label class="chk"><input type="checkbox" id="inAnimInf"> 無限重複</label>
+            </div>
+            <select id="inAnim" style="display:none"><option value="">（無）</option></select>
+            <div class="hint" style="margin-bottom:8px">點名稱＝套用到選取的元素（再點一次＝重播）</div>
+            <div id="animList"></div>
+          </div></details>
+
+          <details class="ps" data-g="adv"><summary><span class="si">⚙</span>進階</summary><div class="psb">
+            <div class="fgrid">
+              <label class="fld"><span>右 right</span><input class="tin" id="inRight"></label>
+              <label class="fld"><span>下 bottom</span><input class="tin" id="inBottom"></label>
+              <label class="fld full"><span>class</span><input class="tin" id="selClass" placeholder="空白分隔" spellcheck="false"></label>
+              <label class="fld full"><span>style 原始碼</span><textarea class="tin" id="inStyle" rows="5" spellcheck="false"></textarea></label>
+            </div>
+          </div></details>
+        </div>
+      </div>
+      </div>
+      <div class="pane" id="pane-parts">
+        <h4>新增元素 <span style="font-weight:400;letter-spacing:0">（點＝插入 · 拖＝放到指定位置）</span></h4>
+        <div class="newgrid">
+          <button id="newText" class="dragable"><b>Ｔ</b>文字</button>
+          <button id="newBlock" class="dragable"><b>▢</b>區塊</button>
+          <button id="newCanvas" class="dragable"><b>⬒</b>畫布區塊</button>
+          <button id="newSpacer" class="dragable"><b>↕</b>空白間隔</button>
+        </div>
+        <div class="hint" style="margin-bottom:10px" id="targetHint">拖到「畫布區塊」上＝變成可自由移動的<b style="color:var(--accent)">圖層</b>；拖到一般區塊上＝接在它後面。</div>
+        <h4>部件庫 <span style="font-weight:400;letter-spacing:0">（滑過看樣子・按住拖到預覽）</span></h4>
+        <div class="hint" id="libNote" style="margin-bottom:10px"></div>
+        <div id="partsList"></div>
+      </div>
+
+      <div class="pane" id="pane-img">
+        <div class="modeNote onlyMode m-chat"><b>聊天室會刪掉 &lt;img&gt;</b>。這裡拖放／插入的圖片會自動改寫成「背景圖 div」（<code>background:url()</code>），在聊天室能正常顯示。</div>
+        <div class="modeNote bad onlyMode m-widget"><b>小工具不能放圖片</b>：&lt;img&gt; 會被刪、style 裡的 <code>url()</code> 也會被刪。可以用漸層、色塊、文字符號代替。</div>
+        <div class="noWidget">
+        <div class="frow"><input class="tin" id="imgUrl" placeholder="貼上圖片網址（https://…）"><button class="mbtn solid" id="imgAdd" style="flex:0 0 auto">＋加入</button></div>
+        <div id="imgPrevBox"><span class="noimg">貼上連結會先在這裡預覽</span></div>
+        <div class="hint" style="margin-bottom:8px"><b style="color:var(--accent)">按住縮圖拖到預覽上</b>：拖到畫布＝圖層、拖到畫布外＝滿寬圖片。</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span class="hint" style="flex:1">📌 釘選的不會被清除</span>
+          <button class="mbtn" id="assetClear" style="flex:0 0 auto;padding:3px 8px">一鍵清除（留釘選）</button>
+        </div>
+        <div id="assetGrid"></div>
+        <div style="display:flex;align-items:center;gap:6px;margin:16px 0 8px" id="formHeadRow">
+          <button class="phead" id="formToggle" style="flex:1;background:none;border:0;color:var(--muted);text-align:left;font-size:11px;letter-spacing:2px;font-weight:700;padding:0;cursor:pointer">▾ 圖片形式（拖放／插入都套用）</button>
+        </div>
+        <div id="formWrap">
+          <div id="formSettings" style="border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--panel2)">
+            <div class="srow" style="margin-bottom:6px"><label style="flex:0 0 46px">淡化</label><input type="range" id="imgFade" min="0" max="100" value="100"><input type="number" class="snum" id="imgFadeN" min="0" max="100" value="100"><span class="sunit">%</span></div>
+            <div class="srow" style="margin-bottom:6px"><label style="flex:0 0 46px"><input type="checkbox" id="imgBorderOn"> 邊框</label><input type="color" id="imgBorderC" value="#f0b03c" style="width:30px;height:26px;padding:1px;border:1px solid var(--line);border-radius:6px;background:none"><input type="number" class="snum" id="imgBorderW" min="1" max="12" value="3"><span class="sunit">px</span></div>
+          </div>
+          <div id="formGrid"></div>
+          <div class="prow" style="margin-top:8px">
+            <button class="mbtn solid" id="imgInsert">用此形式插入</button>
+            <button class="mbtn" id="imgCopy">複製 code</button>
+          </div>
+        </div>
+        <h4>頁面中的圖片（點＝選取）</h4>
+        <div id="imgUsed"></div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-tpl">
+        <div class="hint" style="margin-bottom:12px">21 款完整的小工具。滑過看樣子，點開可以「插入」或「取代整份」。<br>變數都是 <b>{{英文大寫}}</b>，記得在角色設定的狀態值裡用同樣的名字。</div>
+        <div id="tplList"></div>
+      </div>
+      <div class="pane" id="pane-conv">
+        <div class="modeNote"><b>一般 div → 畫布</b><br>把一個區塊變成「畫布」：裡面第一層的東西會依照現在的位置變成可以自由拖曳的圖層（top／left／width 用 %），字級改成跟著寬度等比縮放。</div>
+        <div class="modeNote"><b>畫布 → 一般 div</b><br>把畫布裡的圖層依照由上到下的位置排回一般版面，用 margin 保留原本的間距；同一列並排的會放進同一排。沒有文字的裝飾層（漸層、光暈）保留在原位。</div>
+        <div class="sublab">選項</div>
+        <label class="chk" style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)"><input type="checkbox" id="cvFont" checked> 同時轉換字級（px ⇄ 等比縮放）</label>
+        <div class="modeNote"><b>基準寬度是什麼？</b><br>就是「你的設計在多寬的時候是你要的樣子」。轉換時會先把內容排在這個寬度量位置，再換算成百分比；字級也會設定成在這個寬度時剛好等於原本的 px，比它窄就等比縮小。例如你是用 780 寬設計的，就填 780。</div>
+        <div class="hint" style="margin-top:14px">下面的寬度預覽只能看、不能改；可以點寬度按鈕開關，也可以輸入自訂寬度。轉好後按「放進編輯器」就能回到預覽裡繼續調。</div>
+      </div>
+      <div class="pane" id="pane-deco">
+        <div class="modeNote bad onlyMode m-widget"><b>小工具會刪掉 <code>url()</code></b>：用到 url() 的花紋（六角網、格線、雜訊）已經自動隱藏，下面列的都能用。</div>
+        <div class="hint" style="margin-bottom:12px">展開一個裝飾，調好顏色後按「加到畫布」。加上去之後選取它，屬性的「顏色」裡還能再換色。</div>
+        <div id="decoList"></div>
+      </div>
+      <div class="pane" id="pane-mine">
+        <div class="hint" style="margin-bottom:12px">把調好的樣式存起來，之後選一個元素、點一下就套用。含 <code>position:absolute</code> 的會當成「圖層」直接加到畫布。</div>
+        <div class="mycss-add">
+          <input class="tin" id="cssName" placeholder="名稱（例：金色卡底）">
+          <button class="mbtn solid" id="cssFromSel" title="把目前選取元素的 style 存下來">＋ 存選取的元素</button>
+        </div>
+        <details class="mycss-manual"><summary>或手動貼上 CSS</summary>
+          <textarea class="tin" id="cssText" rows="3" style="width:100%" placeholder="background:linear-gradient(...);border:2px solid ...;"></textarea>
+          <div class="prow"><button class="mbtn solid" id="cssSave">＋ 儲存</button></div>
+        </details>
+        <div class="sublab">已存的設定 <span id="cssCount"></span></div>
+        <div id="cssList"></div>
+      </div>
+      <div class="pane" id="pane-tree">
+        <div id="treeTools">
+          <button id="tUp" title="結構順序往上">↑ 上移</button>
+          <button id="tDown" title="結構順序往下">↓ 下移</button>
+          <button id="tOut" title="移出容器一層">⇤ 移出</button>
+          <button id="tIn" title="放進上一個元素裡面">⇥ 放進上一個</button>
+          <button id="tDup" title="原地複製一份">⧉ 複製</button>
+          <button id="tDel" title="刪除（子內容一併刪除）">✕ 刪除</button>
+        </div>
+        <div class="hint" style="margin-bottom:8px">這裡管「結構」。畫布裡的前後疊層用選取框下方的 ⏶⏷，或屬性的「疊層」。紅色 ⚠＝這個標籤在目前頁面無效。</div>
+        <div id="treeBox"></div>
+      </div>
+      <div class="pane" id="pane-save">
+        <div class="modeNote">這裡是「<b id="saveModeName">角色介面</b>」自己的存檔，其他頁面看不到。上限 <b>15</b> 筆。<br><b>載入</b>＝整份取代，<b>插入</b>＝接到後面。</div>
+        <div class="frow"><input class="tin" id="htmlSaveName" placeholder="這份的名稱（例：角色卡 v2）"><button class="mbtn solid" id="htmlSaveBtn" style="flex:0 0 auto">＋存目前</button></div>
+        <div id="htmlSaveCount" class="hint" style="margin-bottom:8px"></div>
+        <div id="htmlSaveList"></div>
+        <details class="saveInfo">
+          <summary>💡 存檔存在哪裡？／備份</summary>
+          <div class="hint">所有存檔、素材、色票、常用設定都存在<b>這台電腦、這個瀏覽器</b>的 localStorage。<br>・換電腦、換瀏覽器、無痕模式都看不到<br>・清除瀏覽器的網站資料會一起被刪掉<br>想保險的話，定期按「匯出備份」存一份檔案。</div>
+          <div class="prow"><button class="mbtn" id="bkExport">⬇ 匯出備份</button><button class="mbtn" id="bkImport">⬆ 匯入備份</button></div>
+          <input type="file" id="bkFile" accept=".json,application/json" style="display:none">
+        </details>
+        <details class="sect resetSect"><summary>⟲ 重設</summary><div class="sbody">
+          <div class="hint">兩個都要按兩次才會執行。</div>
+          <div class="rrow"><button class="mbtn" id="rsExample">換回範例 code</button><span class="hint">只換目前這一頁的內容，可以按 ↩ 復原</span></div>
+          <div class="rrow"><button class="mbtn" id="rsLayout">還原外觀設定</button><span class="hint">欄寬、收合、預覽寬度、深淺、code 高度回到預設；語言、內容、存檔、素材、色票、常用設定都保留</span></div>
+        </div></details>
+      </div>
+
+    </aside>
+    <div class="gutter" id="gutterL" title="拖曳調整面板寬度"></div>
+
+    <!-- ══ 中央預覽＋code 抽屜 ══ -->
+    <section id="stage" class="codeClosed">
+      <div id="stagebar">
+        <span id="modeBadge" title="單擊選取・拖外框移動・雙擊改字・Delete 刪除・Ctrl+C 複製區塊">角色介面</span>
+        <div class="wgroup">
+          <span class="seglabel">預覽寬度</span>
+          <div class="seg" id="segW">
+            <button data-w="390">390</button><button data-w="600">600</button><button data-w="780" class="on">780</button><button data-w="full">滿版</button>
+          </div>
+          <div class="wbox" title="輸入寬度按 Enter 套用；按「存」存進旁邊的格子（最多兩個，右鍵清除）">
+            <input type="number" id="wIn" min="200" max="2000" placeholder="自訂"><span class="wu">px</span><button id="wSave">存</button>
+          </div>
+          <div class="seg" id="wSlots"><button data-slot="0"></button><button data-slot="1"></button></div>
+        </div>
+        <span class="sgap"></span>
+        <span id="stageHint" style="display:none"></span>
+        <button id="warnBtn">✔ 檢查通過</button>
+        <span id="saveState">尚未儲存</span>
+      </div>
+      <div id="convView">
+        <div class="cvTop">
+          <div class="segfull" id="cvDir" style="width:auto"><button data-d="toCanvas" class="on">一般 div → 畫布</button><button data-d="toFlow">畫布 → 一般 div</button></div>
+          <label class="cvBaseL" title="基準寬度＝你的設計在多寬時是你要的樣子。轉換時先把內容排在這個寬度量位置、換算成 %；字級也設定成在這個寬度時剛好等於原本的 px。">基準寬度 ⓘ <input type="number" id="cvBase" value="780" min="300" max="1400"> px</label>
+          <button class="tbtn gold" id="cvRun">轉換 ▶</button>
+        </div>
+        <div class="cvIO">
+          <div class="cvCol"><div class="cvHead"><b>原始 code</b><span id="cvInCount"></span><span class="sgap"></span><button class="tbtn" id="cvFromEditor">帶入編輯器的 code</button></div><textarea id="cvIn" spellcheck="false" placeholder="貼上要轉換的 div…"></textarea></div>
+          <div class="cvCol"><div class="cvHead"><b>轉換結果</b><span id="cvOutCount"></span><span class="sgap"></span><button class="tbtn" id="cvSwap" title="把結果拿到左邊再轉一次">⇄</button><button class="tbtn" id="cvCopy">複製</button><button class="tbtn gold" id="cvToEditor">放進編輯器</button></div><textarea id="cvOut" spellcheck="false" readonly placeholder="按「轉換」後出現在這裡"></textarea></div>
+        </div>
+        <div class="cvPrevBar"><b>各寬度預覽</b><span class="hint">只能看，不能改</span><div id="cvWs"></div><span class="wbox cvAdd"><input type="number" id="cvWIn" min="200" max="2000" placeholder="自訂"><span class="wu">px</span><button id="cvWAdd">＋</button></span><span class="sgap"></span><div class="segfull" id="cvWhich" style="width:auto"><button data-w="in">原始</button><button data-w="out" class="on">結果</button></div></div>
+        <div id="cvPrev"></div>
+      </div>
+      <div id="warnPanel"><h5 id="warnTitle">CaveDuck 相容性檢查</h5><div id="warnList"></div></div>
+      <div id="canvas">
+        <div id="page" class="dark" data-mode="info"><div id="pv" class="cdpv"></div></div>
+        <div id="ovl">
+          <div class="obox"><span class="tagchip">div</span></div>
+          <div class="qbar">
+            <button data-q="up" title="往前一層（畫布內）／往上移（流式）">⏶</button>
+            <button data-q="down" title="往後一層（畫布內）／往下移（流式）">⏷</button>
+            <span class="qs"></span>
+            <button data-q="color" title="用調色盤改顏色">🎨</button>
+            <button data-q="code" title="在 code 裡找到這段">&lt;/&gt;</button>
+            <button data-q="canvas" class="qcv" title="轉為畫布（裡面變圖層）">▣ 轉畫布</button>
+            <button data-q="dup" title="複製一份">⧉</button>
+            <button data-q="del" class="qdel" title="刪除">✕</button>
+          </div>
+          <button class="h" data-h="nw" title="調整大小"></button><button class="h" data-h="n"></button><button class="h" data-h="ne"></button>
+          <button class="h" data-h="e"></button><button class="h" data-h="se"></button><button class="h" data-h="s"></button>
+          <button class="h" data-h="sw"></button><button class="h" data-h="w"></button>
+          <button class="rot" title="旋轉（按住 Shift＝每 15°）"></button>
+        </div>
+      </div>
+      <div id="codewrap">
+        <div id="gutterCode" title="拖曳調整 code 高度"></div>
+        <div id="codebar">
+          <button class="tbtn" id="btnCodeToggle">▴ HTML code</button>
+          <span class="hideable" id="codeChars" title="含空白、空格、換行，每個都算一個字元">0 字元</span>
+          <span class="cgap"></span>
+          <button class="tbtn hideable" id="btnWrap" title="切換：一行到底 / 自動換行（只是顯示，不改內容）">↩ 自動換行</button>
+          <button class="tbtn hideable" id="btnTidy" title="整份程式碼正規化為單引號屬性（CaveDuck 建議格式）">✒ 單引號化</button>
+          <button class="tbtn hideable" id="btnCopyCode" title="複製整份 HTML">⧉ 複製全部</button>
+          <button class="tbtn hideable" id="btnSqueeze" title="連續兩行以上的空白行壓成一行（CaveDuck 遇到連續空白行會截斷）">⇣ 壓縮空行</button>
+          <button class="tbtn hideable" id="btnNoComment" title="移除所有 <!-- --> 註解">清註解</button>
+          <button class="tbtn warn2 hideable" id="btnClear">清空</button>
+        </div>
+        <div id="codeFlash"></div>
+        <textarea id="code" spellcheck="false" placeholder="在這裡貼上或編寫 HTML…"></textarea>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="tt">
+    <button id="ttB" title="粗體"><b>B</b></button>
+    <button id="ttI" title="斜體"><i>I</i></button>
+    <span class="sep"></span>
+    <button id="ttSizeUp" title="放大選取的字">A＋</button>
+    <button id="ttSizeDn" title="縮小選取的字">A－</button>
+    <span class="sep"></span>
+    <button id="ttColor" title="套用調色盤目前的顏色"><span class="ttc" id="ttcSw"></span></button>
+    <span class="sep"></span>
+    <button id="ttDone" title="完成編輯" style="color:var(--ok)">✓ 完成</button>
+  </div>
+  <div id="dragGhost"><img alt=""><span class="glab"></span></div>
+  <div id="toast"></div>
+  <span id="charCount" style="display:none"></span>
+</div>
+<script src="js/core/rules.js"></script>
+<script src="js/data/anims.js"></script>
+<script src="js/data/colors.js"></script>
+<script src="js/data/parts-base.js"></script>
+<script src="js/data/parts-info.js"></script>
+<script src="js/data/parts-widget.js"></script>
+<script src="js/data/widget-templates.js"></script>
+<script src="js/data/decos.js"></script>
+<script src="js/data/starters.js"></script>
+<script src="js/core/editor.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/core/modes.js"></script>
+<script src="js/ui/workbench.js"></script>
+<script src="js/ui/library.js"></script>
+<script src="js/ui/decos.js"></script>
+<script src="js/ui/extras.js"></script>
+<script src="js/main.js"></script>
+<script src="js/i18n/dict.js"></script>
+<script src="js/i18n/strings.js"></script>
+<script src="js/i18n/i18n.js"></script>
+</body>
+</html>

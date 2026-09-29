@@ -1,0 +1,33 @@
+/* ═══════════ 預覽區：模擬 CaveDuck 環境（tailwind preflight ＋ 常用 class ＋ animate.css）═══════════ */
+#pv{font-family:ui-sans-serif,system-ui,'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;font-size:16px;line-height:1.5;padding:14px 0;overflow-x:hidden;position:relative;min-height:80px}
+#page.dark #pv{color:#e5e7eb}
+#page.light #pv{color:#26242e}
+#pv, #pv *{box-sizing:border-box;border-width:0;border-style:solid;border-color:currentColor}
+#pv p{margin:0}
+#pv hr{height:0;color:inherit;border-top-width:1px}
+#pv a{color:inherit;text-decoration:inherit}
+#pv img{display:block;max-width:100%;height:auto;vertical-align:middle}
+#pv b,#pv strong{font-weight:bolder}
+#pv em,#pv i{font-style:italic}
+
+/* caveduck / tailwind 常用 class（僅預覽用） */
+#pv .flex{display:flex} #pv .inline-flex{display:inline-flex} #pv .block{display:block} #pv .inline-block{display:inline-block} #pv .hidden{display:none}
+#pv .relative{position:relative} #pv .absolute{position:absolute}
+#pv .overflow-hidden{overflow:hidden}
+#pv .text-center{text-align:center} #pv .text-right{text-align:right} #pv .text-left{text-align:left}
+#pv .items-center{align-items:center} #pv .items-start{align-items:flex-start} #pv .items-end{align-items:flex-end}
+#pv .justify-center{justify-content:center} #pv .justify-between{justify-content:space-between} #pv .justify-around{justify-content:space-around}
+#pv .flex-wrap{flex-wrap:wrap} #pv .flex-col{flex-direction:column}
+#pv .whitespace-nowrap{white-space:nowrap}
+#pv .w-full{width:100%} #pv .mx-auto{margin-left:auto;margin-right:auto}
+#pv .rounded{border-radius:4px} #pv .rounded-lg{border-radius:8px} #pv .rounded-full{border-radius:9999px}
+#pv .gap-1{gap:4px} #pv .gap-2{gap:8px} #pv .gap-3{gap:12px} #pv .gap-4{gap:16px} #pv .gap-6{gap:24px} #pv .gap-8{gap:32px}
+#pv .font-bold{font-weight:700} #pv .italic{font-style:italic} #pv .underline{text-decoration:underline}
+#pv .bg-duck-pink1{background-color:#e72563} #pv .text-duck-pink1{color:#e72563} #pv .border-duck-pink1{border-color:#e72563}
+#pv .bg-duck-pink2{background-color:#bc1e51} #pv .text-duck-pink2{color:#bc1e51}
+#pv .bg-duck-yellow{background-color:#ffb400} #pv .text-duck-yellow{color:#ffb400}
+#pv .bg-dgray-50{background-color:#f7f9fa} #pv .bg-dgray-100{background-color:#f1f4f6} #pv .bg-dgray-200{background-color:#e5e7eb} #pv .bg-dgray-300{background-color:#d1d5db} #pv .bg-dgray-400{background-color:#9ca3af} #pv .bg-dgray-500{background-color:#858d9b} #pv .bg-dgray-600{background-color:#737883} #pv .bg-dgray-700{background-color:#595b63} #pv .bg-dgray-800{background-color:#3e3e41} #pv .bg-dgray-900{background-color:#2d2d2d}
+#pv .text-dgray-100{color:#f1f4f6} #pv .text-dgray-200{color:#e5e7eb} #pv .text-dgray-300{color:#d1d5db} #pv .text-dgray-400{color:#9ca3af} #pv .text-dgray-500{color:#858d9b} #pv .text-dgray-700{color:#595b63} #pv .text-dgray-900{color:#2d2d2d}
+#page.dark #pv .bg-background{background-color:#0e0e10} #page.light #pv .bg-background{background-color:#ffffff}
+#page.dark #pv .text-foreground{color:#e5e7eb} #page.light #pv .text-foreground{color:#26242e}
+#pv .text-caveduck-shadow{text-shadow:1px 0 #000,-1px 0 #000,0 1px #000,0 -1px #000}
