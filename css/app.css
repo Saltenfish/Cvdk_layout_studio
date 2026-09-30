@@ -723,6 +723,8 @@ details.saveInfo[open]>summary{margin-bottom:6px}
   #toast{max-width:calc(100vw - 24px);bottom:calc(var(--navH) + 14px)}
   #langAsk .laCard{padding:18px 16px 14px}
 }
+#detToggle{white-space:nowrap}
+#pv summary{cursor:pointer}
 /* ═══ 預覽框：依模式模擬平台外框 ═══ */
 /* 聊天室／角色介面：第一個元素 margin-top、最後一個 margin-bottom 歸零 */
 #page[data-mode=info] #pv>:first-child,#page[data-mode=chat] #pv>:first-child{margin-top:0!important}
