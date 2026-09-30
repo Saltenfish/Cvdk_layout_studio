@@ -300,7 +300,7 @@ pv.addEventListener('mouseover',e=>{
   if(t&&!t.classList.contains('cdb-sel')){ t.classList.add('cdb-hover'); hoverEl=t; }
 });
 pv.addEventListener('mouseout',()=>{ if(hoverEl){ hoverEl.classList.remove('cdb-hover'); hoverEl=null; } });
-pv.addEventListener('click',e=>{ e.preventDefault(); }); // 擋住 <a> 導航
+pv.addEventListener('click',e=>{ if(editingText||!e.target.closest('summary')) e.preventDefault(); }); // 擋住 <a> 導航；summary 讓它照常開關
 
 /* ═══════════ 12. 互動引擎：選取控制框、移動、縮放、旋轉 ═══════════ */
 const ovl=$('#ovl'), obox=ovl.querySelector('.obox'), tagchip=ovl.querySelector('.tagchip');
