@@ -97,6 +97,8 @@ document.documentElement.classList.toggle('touchUI',TOUCH_UI);
     fire('mouseup',document,t);
     if(e.cancelable) e.preventDefault();          // 不要再多送一次滑鼠事件
     if(!a.moved&&!a.handle){
+      const sm=a.el.closest&&a.el.closest('summary');   // 手機點 summary：開關 details（上面擋掉了原本的 click）
+      if(sm&&pv.contains(sm)&&!editingText&&sm.parentElement&&sm.parentElement.tagName==='DETAILS') sm.parentElement.open=!sm.parentElement.open;
       const now=Date.now();
       if(now-lastTap.t<380&&lastTap.el===a.el){ fire('dblclick',a.el,t); lastTap={t:0,el:null}; }
       else lastTap={t:now,el:a.el};
@@ -112,3 +114,30 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(!load('cdb3_w_m')){ setWidth('full'); store('cdb3_w_m','1'); }
 });
 MQ_MOBILE.addEventListener('change',()=>requestAnimationFrame(positionOverlay));
+
+/* ═══════════ 30. v3.9：預覽裡的 details／summary 可以點開測試（聊天室、小工具）═══════════ */
+/* 只改預覽，不會寫進 code；重新渲染後保留你點開的狀態 */
+const DET_STATE={}; let detMode=null;
+function detRecord(){ if(!detMode) return; DET_STATE[detMode]=[...pv.querySelectorAll('details')].map(d=>({src:d.dataset.srcOpen==='1',cur:d.open})); }
+function updDetBtn(){
+  const b=$('#detToggle'); if(!b) return;
+  const ds=[...pv.querySelectorAll('details')];
+  b.style.display=(mode==='info'||!ds.length)?'none':'';
+  const anyClosed=ds.some(d=>!d.open);
+  b.textContent=anyClosed?'▾ 全部展開':'▸ 全部收合';
+  b.title=mode==='widget'?'只影響預覽，不會改到 code（小工具在 CaveDuck 上一定是收合的）':'只影響預覽，不會改到 code';
+}
+{ const _pr=parseAndRender; parseAndRender=function(k){
+  detRecord();
+  const r=_pr(k);
+  detMode=mode;
+  const st=DET_STATE[mode]||[];
+  pv.querySelectorAll('details').forEach((d,i)=>{ d.dataset.srcOpen=d.open?'1':'0'; const s=st[i]; if(s&&s.src===d.open) d.open=s.cur; });
+  updDetBtn(); try{ positionOverlay(); }catch(e){}
+  return r;
+}; }
+pv.addEventListener('toggle',()=>{ updDetBtn(); requestAnimationFrame(()=>{ try{ positionOverlay(); }catch(e){} }); },true);
+$('#detToggle').addEventListener('click',()=>{
+  const ds=[...pv.querySelectorAll('details')]; const open=ds.some(d=>!d.open);
+  ds.forEach(d=>d.open=open); updDetBtn();
+});
