@@ -725,6 +725,43 @@ details.saveInfo[open]>summary{margin-bottom:6px}
 }
 #detToggle{white-space:nowrap}
 #pv summary{cursor:pointer}
+/* v4.0 圖片 */
+#formSettings .isHead{font-size:11.5px;color:var(--muted);margin:0 0 8px}
+#formSettings .isHead b{color:var(--mode)}
+#formSettings .isr{margin-bottom:6px}
+#formSettings .isr label{flex:0 0 58px}
+#formSettings .isr select.tin{flex:1;min-width:0}
+#formSettings .isr .isHex{flex:1;min-width:0;font-family:var(--mono)}
+#psImg .chipRow{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+#psImg .chip{padding:4px 9px;font-size:11px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--muted)}
+#psImg .chip:hover{border-color:var(--mode);color:var(--mode)}
+#psImg select.tin{flex:1}
+#psImg #piFit{display:flex;margin-bottom:8px}
+#psImg #piFit button{flex:1}
+#psImg .posGrid{display:grid;grid-template-columns:repeat(3,26px);gap:4px}
+#psImg .posGrid button{height:22px;border:1px solid var(--line);border-radius:4px;background:var(--panel2)}
+#psImg .posGrid button.on{background:var(--mode);border-color:var(--mode)}
+/* v4.1 圖片元件／分鏡 */
+.cmGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.cmCard .fname{font-size:10.5px;line-height:1.3}
+.cmCard{min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:6px;cursor:grab}
+.cmCard:hover{border-color:var(--mode)}
+.cmPrev{overflow:hidden;border-radius:6px;background:var(--thumb);position:relative}
+.cmCard .fname{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+#psImg #piPan{width:100%;margin:2px 0 8px}
+#psImg #piPan.on{background:var(--mode);color:var(--mode-ink);border-color:var(--mode)}
+body.panMode #pv .cdb-sel,body.panMode #pv{cursor:move}
+#psImg .isHex,#psComic .isHex{flex:1;min-width:0;font-family:var(--mono)}
+#psComic .srow input[type=color],#psImg .srow input[type=color]{flex:0 0 30px}
+/* v4.1 code 局部標示 */
+#codeMarks{position:absolute;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity .35s}
+#codeMarks.on{opacity:1;transition:opacity .08s}
+#codeMarks i{position:absolute;border-radius:3px;background:rgba(240,176,60,.38);box-shadow:0 0 0 1px rgba(240,176,60,.75),0 0 12px rgba(240,176,60,.55)}
+:root[data-theme=light] #codeMarks i{background:rgba(255,200,0,.45)}
+#codeMirror{position:absolute;left:-99999px;top:0;visibility:hidden;overflow:hidden;height:auto}
+.srow.adj{background:var(--mode-dim);border-radius:6px;box-shadow:0 0 0 1px var(--mode-line),0 0 14px var(--mode-dim)}
+.srow.adj .sval{color:var(--mode);font-weight:700;text-shadow:0 0 8px var(--mode)}
+.srow.adj label{color:var(--mode)}
 /* ═══ 預覽框：依模式模擬平台外框 ═══ */
 /* 聊天室／角色介面：第一個元素 margin-top、最後一個 margin-bottom 歸零 */
 #page[data-mode=info] #pv>:first-child,#page[data-mode=chat] #pv>:first-child{margin-top:0!important}
