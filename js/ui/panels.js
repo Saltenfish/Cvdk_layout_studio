@@ -214,7 +214,7 @@ $('#pbSelectCode').addEventListener('click',()=>{
   toast('已在下方選取，<b>Ctrl+C</b> 帶走');
 });
 $('#pbCopy').addEventListener('click',()=>{ const n=selNode(); if(n) copyText(serializeNode(n),'<b>已複製</b>區塊 code'); });
-$('#pbDup').addEventListener('click',()=>{ const n=selNode(); if(!n)return; const cp=n.cloneNode(true); n.parentNode.insertBefore(cp,n.nextSibling); writeback(cp); toast('<b>已複製一份</b>在原元素後面'); });
+$('#pbDup').addEventListener('click',()=>{ const n=selNode(); if(!n)return; const cp=n.cloneNode(true); n.parentNode.insertBefore(cp,n.nextSibling); n.parentNode.insertBefore(document.createTextNode('\n'),cp); writeback(cp); toast('<b>已複製一份</b>在原元素後面'); });
 $('#pbDel').addEventListener('click',()=>{ const n=selNode(); if(!n)return; n.remove(); clearSelection(); writeback(null); toast('<b>已刪除</b>'); });
 
 /* 圖片網址（選到 img 時顯示） */
@@ -353,6 +353,8 @@ function lastCanvas(){
 function pxToClamp(px){ px=Math.round(px); return `clamp(${Math.max(9,Math.round(px*0.55))}px,${+(px/7.8).toFixed(2)}vw,${px}px)`; }
 function parseClampMax(v){ const m=/^clamp\([^,]+,[^,]+,\s*([\d.]+)px\s*\)$/.exec((v||'').trim()); return m?parseFloat(m[1]):null; }
 let layerDrop={x:30,y:26};
+/* 插入時換行，不要接成一長條 */
+function nlAppend(p,node){ const l=p.lastChild; if(!(l&&l.nodeType===3&&/\n[ \t]*$/.test(l.nodeValue))) p.appendChild(document.createTextNode('\n')); p.appendChild(node); p.appendChild(document.createTextNode('\n')); }
 function insertSmart(html,opt){
   opt=opt||{};
   html=stripComments(html);
@@ -365,12 +367,12 @@ function insertSmart(html,opt){
   if(cv==null&&opt.canvas===undefined&&!opt.forceFlow&&!sel) cv=lastCanvas(); // 沒選任何東西 → 預設進最後一塊畫布
   if(cv){ // → 圖層
     let layer;
-    if(els.length===1&&/absolute/.test(els[0].style.position||'')){ layer=els[0]; cv.appendChild(frag); }
+    if(els.length===1&&/absolute/.test(els[0].style.position||'')){ layer=els[0]; nlAppend(cv,frag); }
     else{
       layer=document.createElement('div');
       layer.style.cssText='position:absolute;width:60%;';
       layer.appendChild(frag);
-      cv.appendChild(layer);
+      nlAppend(cv,layer);
     }
     const x=opt.x!=null?opt.x:layerDrop.x, y=opt.y!=null?opt.y:layerDrop.y;
     if(!layer.style.top&&!layer.style.bottom) layer.style.top=Math.round(y*10)/10+'%';
@@ -471,7 +473,7 @@ $('#tUp').addEventListener('click',()=>{ const n=selNode(); const p=prevElSib(n)
 $('#tDown').addEventListener('click',()=>{ const n=selNode(); const x=nextElSib(n); if(!x)return; moveUnit(n,n.parentNode,x.nextSibling); writeback(n); });
 $('#tOut').addEventListener('click',()=>{ const n=selNode(); const pa=n.parentNode; if(!pa||pa.nodeType!==1)return; moveUnit(n,pa.parentNode,pa.nextSibling); writeback(n); });
 $('#tIn').addEventListener('click',()=>{ const n=selNode(); const p=prevElSib(n); if(!p)return; moveUnit(n,p,null); writeback(n); });
-$('#tDup').addEventListener('click',()=>{ const n=selNode(); if(!n)return; const cp=n.cloneNode(true); n.parentNode.insertBefore(cp,n.nextSibling); writeback(cp); });
+$('#tDup').addEventListener('click',()=>{ const n=selNode(); if(!n)return; const cp=n.cloneNode(true); n.parentNode.insertBefore(cp,n.nextSibling); n.parentNode.insertBefore(document.createTextNode('\n'),cp); writeback(cp); });
 $('#tDel').addEventListener('click',()=>{ const n=selNode(); if(!n)return; n.remove(); clearSelection(); writeback(null); });
 
 /* ═══════════ 17. 部件庫 ═══════════ */
