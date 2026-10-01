@@ -79,6 +79,14 @@ const I18N_HTML={
 
 /* 動態字串：[正則, en, ko, ja]；{1}{2}… 是抓到的值（能翻的會一起翻）*/
 const I18N_PAT=[
+[/^圖片：(.+)$/,'Image: {1}','이미지: {1}','画像：{1}'],
+[/^(.+?)：按住拖到預覽＝用這個樣式放圖（點一下＝設為預設樣式）$/,'{1}: drag onto the preview to place an image in this style (click = set as default)','{1}: 미리보기로 드래그 = 이 스타일로 배치 (클릭 = 기본값)','{1}：プレビューへドラッグ＝このスタイルで配置（クリック＝既定に）'],
+[/^圖片 (.+)$/,'Image {1}','이미지 {1}','画像 {1}'],
+[/^(\w+) · 圖層$/,'{1} · layer','{1} · 레이어','{1} · レイヤー'],
+[/^(\w+) · 畫布$/,'{1} · canvas','{1} · 캔버스','{1} · キャンバス'],
+[/^<b>(\d+) 張圖片還是示範圖<\/b>——點選圖片，在屬性最上面的「圖片網址」換成你自己的圖片$/,'<b>{1} image(s) are still samples</b> — click the image and replace the "Image URL" at the top of Props with your own','<b>이미지 {1}장이 아직 예시 이미지예요</b> — 이미지를 클릭하고 속성 맨 위 「이미지 URL」을 내 이미지로 바꾸세요','<b>{1} 枚の画像がまだサンプルです</b>——画像をクリックし、プロパティ上部の「画像URL」を自分の画像に差し替えてください'],
+[/^⚙ <b>(.+?)<\/b> 的設定$/,'⚙ <b>{1}</b> settings','⚙ <b>{1}</b> 설정','⚙ <b>{1}</b> の設定'],
+[/^(.+?) · 濾鏡$/,'{1} · Filter','{1} · 필터','{1} · フィルター'],
 [/^這裡是「<b id="saveModeName">(.+?)<\/b>」自己的存檔，其他頁面看不到。上限 <b>(\d+)<\/b> 筆。<br><b>載入<\/b>＝整份取代，<b>插入<\/b>＝接到後面。$/,
  'These are the saves for "<b id="saveModeName">{1}</b>" only — other pages can\'t see them. Up to <b>{2}</b>.<br><b>Load</b> = replace all, <b>Insert</b> = append.',
  '「<b id="saveModeName">{1}</b>」 전용 저장 공간이에요. 다른 페이지에서는 안 보여요. 최대 <b>{2}</b>개.<br><b>불러오기</b> = 전체 교체, <b>삽입</b> = 뒤에 붙이기.',
@@ -138,6 +146,8 @@ const I18N_PAT=[
 [/^偵測到 (\d+) 個<b>雙引號屬性<\/b>，按 code 列的「✒ 單引號化」一鍵轉換$/,'Found {1} <b>double-quoted attributes</b> — press "✒ Single quotes" in the code bar to convert','<b>큰따옴표 속성</b> {1}개 발견 — 코드 바의 「✒ 작은따옴표로」로 한 번에 변환','<b>ダブルクォートの属性</b>が {1} 個あります——コード欄の「✒ シングルクォート化」で一括変換'],
 [/^(\d+) 個 <code>position:absolute<\/code> 元素沒有 <code>position:relative<\/code> 的父層，位置會亂跑——建議放進「畫布區塊」或幫父層加 relative$/,'{1} <code>position:absolute</code> elements have no <code>position:relative</code> parent, so they\'ll drift — put them in a "canvas block" or add relative to the parent','<code>position:absolute</code> 요소 {1}개에 <code>position:relative</code> 부모가 없어서 위치가 어긋나요 — 「캔버스 블록」에 넣거나 부모에 relative를 추가하세요','<code>position:absolute</code> の要素 {1} 個に <code>position:relative</code> の親がなく、位置がずれます——「キャンバスブロック」に入れるか親に relative を付けてください'],
 [/^小工具內容上限 <b>10000 字<\/b>，目前 ([\d,]+) 字，超過的部分會被截掉$/,'Widgets are limited to <b>10,000 characters</b>; this is {1}, and the rest will be cut off','위젯 내용은 최대 <b>10000자</b>예요. 지금 {1}자라서 넘는 부분은 잘려요','ウィジェットは<b>10000 文字</b>までです。現在 {1} 文字なので、超えた分は切れます']
+,[/^(.*)（還沒放圖）$/,'{1} (no image yet)','{1} (이미지 없음)','{1}（画像なし）']
+,[/^(.+) × 比例$/,'{1} × ratio','{1} × 비율','{1} × 比率'],[/^(.+?) · (.+)$/,'{1} · {2}','{1} · {2}','{1} · {2}']
 ,[/^⚠ (.+)$/,'⚠ {1}','⚠ {1}','⚠ {1}']
 ,[/^<b>已壓縮<\/b> (\d+) 處連續空白行$/,'<b>Squeezed</b> {1} runs of blank lines','연속 빈 줄 {1}곳을 <b>압축</b>했어요','連続した空行 {1} か所を<b>詰め</b>ました']
 ];
