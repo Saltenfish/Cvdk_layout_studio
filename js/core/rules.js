@@ -23,14 +23,16 @@ const CHAT_TAGS = new Set((
 const WIDGET_TAGS = new Set(['div','span','p','br','hr','section','article','header','footer','nav','aside','figure','figcaption',
   'h1','h2','h3','h4','h5','h6','strong','em','b','i','u','s','small','sub','sup','mark',
   'ul','ol','li','table','thead','tbody','tfoot','tr','th','td','blockquote','pre','code','dl','dt','dd','details','summary']);
+/* DOMPurify 只有在「標籤本身被刪」時才連內容一起刪；允許的標籤（例如聊天室的 thead、colgroup、mi…）要留著 */
+function dropFor(tags){ return new Set([...PURIFY_DROP].filter(t=>!tags.has(t))); }
 const MODES = {
   info:  { name:'角色介面', tags:ALLOWED_TAGS, drop:DROP_INFO,
            attr:(t,n)=>n==='style'||n==='class'||(TAG_ATTRS[t]||[]).includes(n),
            ph:'在這裡貼上或編寫 CaveDuck 角色介面 HTML…' },
-  chat:  { name:'聊天室', tags:CHAT_TAGS, drop:PURIFY_DROP,
+  chat:  { name:'聊天室', tags:CHAT_TAGS, drop:dropFor(CHAT_TAGS),
            attr:(t,n)=>!/^on/i.test(n),
            ph:'在這裡貼上或編寫聊天室訊息用的 HTML…（不能用 a、img、style）' },
-  widget:{ name:'小工具', tags:WIDGET_TAGS, drop:PURIFY_DROP,
+  widget:{ name:'小工具', tags:WIDGET_TAGS, drop:dropFor(WIDGET_TAGS),
            attr:(t,n)=>n==='style'||n==='class',
            ph:'在這裡貼上或編寫小工具（狀態欄）HTML…（變數用 {{英文大寫}}）' }
 };
