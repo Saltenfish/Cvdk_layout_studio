@@ -39,6 +39,8 @@ function TS(s){                      // 一整段字串（可含 inline HTML）
   return s;
 }
 window.UI_T=TS;
+/* 開頁時先畫好的、不經過自動翻譯的提示，語言就緒後重畫一次 */
+setTimeout(()=>{ try{ renderAssets(); renderUsedImages(); }catch(e){} },0);
 
 const SKIP='#pv,#page,#code,textarea,script,style,#cvIn,#cvOut,.fitIn,.hpBox,.pprev,.fprev,.uimg,.mc-name,.mc-css,#assetGrid,#imgUsed,#htmlSaveList .hsName,[data-noi18n]';
 const skip=el=>!!(el&&el.closest&&el.closest(SKIP));

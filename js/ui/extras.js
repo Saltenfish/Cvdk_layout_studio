@@ -50,6 +50,7 @@ armTwice($('#rsLayout'),()=>{
   ownKeys().forEach(k=>{ if(/^cdb3_libopen_/.test(k)) drop.push(k); });
   drop.forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
   store(codeKey(mode),codeEl.value);
+  if(window.UI_LANG) store('cd-lang',window.UI_LANG);   /* 重新載入後維持目前語言 */
   toast('已還原外觀設定，重新載入中…'); setTimeout(()=>{ location.href=location.pathname; },700);
 });
 
@@ -172,7 +173,7 @@ renderUsedImages=function(){
     b.addEventListener('click',()=>applySelection(uidOf.get(el)));
     return b;
   }));
-  if(!items.length) box.innerHTML='<div class="hint" style="grid-column:1/-1">頁面中還沒有圖片</div>';
+  if(!items.length) box.innerHTML='<div class="hint" style="grid-column:1/-1">'+(window.UI_T?UI_T('頁面中還沒有圖片'):'頁面中還沒有圖片')+'</div>';
 };
 { const _sa=syncAssetsFromModel; syncAssetsFromModel=function(){
   const before=assets.length; const r=_sa();

@@ -599,7 +599,7 @@ function renderAssets(){
     b.addEventListener('pointerdown',ev=>{ if(ev.target===x||ev.target===pin) return; startAssetDrag(ev,u,i); });
     return b;
   }));
-  if(!assets.length) g.innerHTML='<div class="hint" style="grid-column:1/-1">還沒有素材——上面貼網址按「＋加入」</div>';
+  if(!assets.length) g.innerHTML='<div class="hint" style="grid-column:1/-1">'+(window.UI_T?UI_T('還沒有素材——上面貼網址按「＋加入」'):'還沒有素材——上面貼網址按「＋加入」')+'</div>';
 }
 $('#assetClear').addEventListener('click',()=>{
   const btn=$('#assetClear');

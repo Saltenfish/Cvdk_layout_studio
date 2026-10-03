@@ -133,7 +133,7 @@ renderUsedImages=function(){
     b.addEventListener('click',()=>applySelection(uidOf.get(el)));
     return b;
   }));
-  if(!items.length) box.innerHTML='<div class="hint" style="grid-column:1/-1">頁面中還沒有圖片</div>';
+  if(!items.length) box.innerHTML='<div class="hint" style="grid-column:1/-1">'+(window.UI_T?UI_T('頁面中還沒有圖片'):'頁面中還沒有圖片')+'</div>';
 };
 
 /* —— 切換模式 —— */
