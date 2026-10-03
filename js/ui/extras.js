@@ -150,7 +150,9 @@ const DEMO_SET=new Set([...PH_ALL,IMG_PLACEHOLDER].map(_normU));
 const PH_SLOT=/^(圖片網址|IMAGE_URL_|이미지URL|画像URL)\d*$/;
 function isDemoImg(u){ return !!u&&(DEMO_SET.has(_normU(u))||PH_SLOT.test(String(u).trim())); }
 function isRealUrl(u){ return !!u&&!/^data:/i.test(u.trim())&&!PH_SLOT.test(u.trim()); }
-function rawBgUrl(n){ const m=/url\((['"]?)([^'")]+)\1\)/.exec(n.getAttribute('style')||''); return m?m[2]:null; }
+function rawBgUrl(n){ const st=n.getAttribute('style')||''; const m=/url\((['"]?)([^'")]+)\1\)/.exec(st); if(m) return m[2]; const k=/image-set\(\s*(['"])([^'"]+)\1/.exec(st); return k?k[2]:null; }
+/* 圖片放在哪個屬性：bg（背景）／content（整個換成圖）／border（border-image） */
+function imgKind(n){ const st=n.getAttribute('style')||''; if(/(^|;)\s*content\s*:\s*image-set/.test(st)) return 'content'; if(/border-image-source\s*:\s*image-set/.test(st)) return 'border'; return 'bg'; }
 function countDemoImgs(){
   let n=0;
   (typeof model!=='undefined'&&model?[...model.querySelectorAll('*')]:[]).forEach(el=>{
@@ -443,7 +445,7 @@ function partsOf(n){
   if(!n) return null;
   const fr=compOf(n);
   if(fr){ const pic=picOf(fr); if(!pic) return null; return {fr,win:pic.parentElement,pic,isImg:pic.tagName==='IMG'}; }
-  if(n.tagName==='IMG'||rawBgUrl(n)) return {fr:null,win:n,pic:n,isImg:n.tagName==='IMG'};
+  if(n.tagName==='IMG'||rawBgUrl(n)){ const k=n.tagName==='IMG'?'img':imgKind(n); return {fr:null,win:n,pic:n,isImg:k==='img'||k==='content',kind:k}; }
   return null;
 }
 const cloneOfEl=el=>{ const i=modelEls.indexOf(el); return i>=0?uid2clone.get(i):null; };
@@ -457,7 +459,8 @@ function readPic(p){
   const fit=p.isImg?(st.objectFit||'cover'):((st.backgroundSize||'cover')==='contain'?'contain':'cover');
   return {fx,fy,zoom,fit};
 }
-function writePic(st,isImg,v){
+function writePic(st,isImg,v,kind){
+  if(kind==='border'){ if(v.zoom!==100) st.transform=`scale(${v.zoom/100})`; else st.removeProperty('transform'); return; }
   const ctr=Math.round(v.fx)===50&&Math.round(v.fy)===50;   // 置中＝預設值，不用寫
   if(isImg){ st.objectFit=v.fit; if(ctr) st.removeProperty('object-position'); else st.objectPosition=`${v.fx}% ${v.fy}%`; }
   else { st.backgroundSize=v.fit; st.backgroundPosition=ctr?'center':`${v.fx}% ${v.fy}%`; }
@@ -534,6 +537,7 @@ function curShape(st){ const cp=nz(st.clipPath); if(!cp||cp==='none') return ['n
     $('#piSlantRow').style.display=(SHAPES.find(s=>s.k===sk)||{}).s?'':'none';
     const rad=parseFloat(wst.borderRadius)||0; $('#piRad').value=rad; $('#piRadV').textContent=rad+'px';
     $('#piRadRow').style.display=sk==='none'?'':'none';
+    const noFit=P.kind==='border'; $('#piFit').style.display=noFit?'none':''; ['#piFx','#piFy'].forEach(id=>$(id).closest('.srow').style.display=noFit?'none':'');
     const v=readPic(P);
     $$('#piFit button').forEach(b=>b.classList.toggle('on',b.dataset.v===v.fit));
     $('#piZoom').value=v.zoom; $('#piZoomV').textContent=v.zoom+'%';
@@ -578,8 +582,8 @@ function curShape(st){ const cp=nz(st.clipPath); if(!cp||cp==='none') return ['n
   $('#piRad').addEventListener('change',e=>{ if(!P) return; if(+e.target.value) P.win.style.borderRadius=e.target.value+'px'; else P.win.style.removeProperty('border-radius'); commit(); });
   /* 裡面的圖：填滿／完整、縮放、位置 */
   const curV=()=>({fit:($('#piFit .on')||{dataset:{v:'cover'}}).dataset.v,zoom:+$('#piZoom').value,fx:+$('#piFx').value,fy:+$('#piFy').value});
-  function picLive(){ if(!P) return; const v=curV(); live(P.pic,st=>writePic(st,P.isImg,v)); }
-  function picCommit(){ if(!P) return; writePic(P.pic.style,P.isImg,curV()); if(P.fr&&P.isImg&&P.win!==P.pic&&P.win.style.aspectRatio&&!P.pic.style.height) P.pic.style.height='100%'; commit(); }
+  function picLive(){ if(!P) return; const v=curV(); live(P.pic,st=>writePic(st,P.isImg,v,P.kind)); }
+  function picCommit(){ if(!P) return; writePic(P.pic.style,P.isImg,curV(),P.kind); if(P.fr&&P.isImg&&P.win!==P.pic&&P.win.style.aspectRatio&&!P.pic.style.height) P.pic.style.height='100%'; commit(); }
   $('#piFit').addEventListener('click',e=>{ const b=e.target.closest('[data-v]'); if(!b||!P) return; $$('#piFit button').forEach(x=>x.classList.toggle('on',x===b));
     if(b.dataset.v==='contain'&&P.fr&&!P.win.style.aspectRatio&&!(P.fr.style.height)){ toast('「原圖比例」本來就會完整顯示；先把比例改成固定的'); }
     picCommit(); });
@@ -687,6 +691,8 @@ adaptForMode=function(html){
   pv.querySelectorAll('img').forEach(im=>{ const v=(im.getAttribute('src')||'').trim(); if(PH_RE.test(v)) im.src=phSvg(v); });
   pv.querySelectorAll('[style*="url("]').forEach(d=>{ const m=/url\((["']?)([^"')]+)\1\)/.exec(d.getAttribute('style')||''); if(m&&PH_RE.test(m[2].trim())) d.style.backgroundImage=`url("${phSvg(m[2].trim())}")`; });
   return r; }; }
+/* 原本的 bgUrlOf 也要認得 image-set 寫法（屬性面板的網址欄、換圖都會用到） */
+bgUrlOf=function(n){ const u=rawBgUrl(n); return (u&&!/^data:image\/svg/i.test(u))?u:null; };
 buildFormGrid();
 
 /* ═══════════ 32. v4.1：調整數值時，code 裡只亮「改到的那一段」＋正在拖的滑桿發光 ═══════════ */
@@ -725,12 +731,25 @@ buildFormGrid();
   function tidyStyles(root){
     const hx=n=>(+n).toString(16).padStart(2,'0');
     root.querySelectorAll('[style]').forEach(e=>{
-      const s0=e.getAttribute('style')||''; if(!/[:;,]\s|rgb\(/.test(s0)) return;
-      let s=s0.replace(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/g,(m,r,g,b)=>'#'+hx(r)+hx(g)+hx(b));
-      s=s.replace(/:\s+/g,':').replace(/;\s+/g,';').replace(/,\s+/g,',').trim();
+      const s0=e.getAttribute('style')||'';
+      if(!/[:;,]\s|rgb\(|image-set\(\s*url\(|:\s*initial|\s\/\s|center center/.test(s0)) return;
+      let s=s0;
+      // image-set(url("x") 1x) → image-set('x' 1x)（瀏覽器改寫後會多出 url(，換回原本的寫法）
+      s=s.replace(/image-set\(\s*url\((["']?)([^"')]+)\1\)/g,(m,q,u)=>`image-set('${u}'`);
+      // 被展開的 border-image／border 收回來
+      s=s.replace(/border-image-(?:width|outset|repeat)\s*:\s*initial\s*;?\s*/g,'');
+      const bw=/(^|;)\s*border-width\s*:\s*([^;\s]+)\s*;/.exec(s), bs=/(^|;)\s*border-style\s*:\s*([^;\s]+)\s*;/.exec(s), bc=/(^|;)\s*border-color\s*:\s*([^;]+?)\s*;/.exec(s);
+      if(bw&&bs&&bc&&!/\s/.test(bc[2].replace(/\([^)]*\)/g,''))){
+        s=s.replace(bw[0],bw[1]+`border:${bw[2]} ${bs[2]} ${bc[2]};`).replace(bs[0],bs[1]).replace(bc[0],bc[1]);
+      }
+      s=s.replace(/(background-position|object-position)\s*:\s*center center/g,'$1:center');
+      s=s.replace(/aspect-ratio\s*:\s*([\d.]+)\s*\/\s*1(?![\d.])/g,'aspect-ratio:$1').replace(/aspect-ratio\s*:\s*([\d.]+)\s*\/\s*([\d.]+)/g,'aspect-ratio:$1/$2');
+      s=s.replace(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/g,(m,r,g,b)=>'#'+hx(r)+hx(g)+hx(b));
+      s=s.replace(/:\s+/g,':').replace(/;\s+/g,';').replace(/,\s+/g,',').replace(/;;+/g,';').replace(/^;/,'').trim();
       if(s!==s0) e.setAttribute('style',s);
     });
   }
+
   /* 回寫 code 時比對前後，只標出改到的那一段（延伸到整個「屬性:值;」） */
   const _wb=writeback;
   writeback=function(){
