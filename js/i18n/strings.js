@@ -145,7 +145,6 @@ const I18N_PAT=[
 [/^屬性 <code>(.+?)<\/code> 不在白名單，會被移除（(\d+) 處）$/,'Attribute <code>{1}</code> isn\'t allowed and will be removed ({2})','속성 <code>{1}</code> 은 허용 목록에 없어서 삭제돼요 ({2}곳)','属性 <code>{1}</code> は許可リストにないため削除されます（{2} か所）'],
 [/^偵測到 (\d+) 個<b>雙引號屬性<\/b>，按 code 列的「✒ 單引號化」一鍵轉換$/,'Found {1} <b>double-quoted attributes</b> — press "✒ Single quotes" in the code bar to convert','<b>큰따옴표 속성</b> {1}개 발견 — 코드 바의 「✒ 작은따옴표로」로 한 번에 변환','<b>ダブルクォートの属性</b>が {1} 個あります——コード欄の「✒ シングルクォート化」で一括変換'],
 [/^(\d+) 個 <code>position:absolute<\/code> 元素沒有 <code>position:relative<\/code> 的父層，位置會亂跑——建議放進「畫布區塊」或幫父層加 relative$/,'{1} <code>position:absolute</code> elements have no <code>position:relative</code> parent, so they\'ll drift — put them in a "canvas block" or add relative to the parent','<code>position:absolute</code> 요소 {1}개에 <code>position:relative</code> 부모가 없어서 위치가 어긋나요 — 「캔버스 블록」에 넣거나 부모에 relative를 추가하세요','<code>position:absolute</code> の要素 {1} 個に <code>position:relative</code> の親がなく、位置がずれます——「キャンバスブロック」に入れるか親に relative を付けてください'],
-[/^小工具內容上限 <b>10000 字<\/b>，目前 ([\d,]+) 字，超過的部分會被截掉$/,'Widgets are limited to <b>10,000 characters</b>; this is {1}, and the rest will be cut off','위젯 내용은 최대 <b>10000자</b>예요. 지금 {1}자라서 넘는 부분은 잘려요','ウィジェットは<b>10000 文字</b>までです。現在 {1} 文字なので、超えた分は切れます']
 ,[/^(.*)（還沒放圖）$/,'{1} (no image yet)','{1} (이미지 없음)','{1}（画像なし）']
 ,[/^(.+) × 比例$/,'{1} × ratio','{1} × 비율','{1} × 比率'],[/^(.+?) · (.+)$/,'{1} · {2}','{1} · {2}','{1} · {2}']
 ,[/^⚠ (.+)$/,'⚠ {1}','⚠ {1}','⚠ {1}']
