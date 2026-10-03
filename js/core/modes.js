@@ -86,7 +86,6 @@ function restoreTplDecls(){
 function modeChecks(src){
   const W=[];
   if(mode==='widget'){
-    if(src.length>10000) W.push({lv:'err',msg:`小工具內容上限 <b>10000 字</b>，目前 ${src.length.toLocaleString()} 字，超過的部分會被截掉`});
     if(/url\s*\(/i.test(src)) W.push({lv:'err',msg:'style 裡的 <code>url()</code> 在小工具會被<b>刪除</b>（背景圖、花紋、遮罩都不會顯示；漸層可以）'});
     if(/<details[^>]*\bopen\b/i.test(src)) W.push({lv:'warn',msg:'<code>open</code> 屬性會被刪，<code>&lt;details&gt;</code> 在小工具一定是收合的'});
   }
