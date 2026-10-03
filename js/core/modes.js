@@ -64,11 +64,8 @@ const NAME_KEYS={char:1,'캐릭터':1,user:1,'사용자':1};
 function widgetCss(css){
   return css.replace(/url\s*\([^)]*\)/gi,'').replace(/expression\s*\([^)]*\)/gi,'').replace(/-moz-binding\s*:[^;]*/gi,'').replace(/@import\b[^;]*/gi,'');
 }
-/* 預覽後處理：小工具 style 過濾（原值記在 data-cdbraw-style，雙擊改字時還原，不會寫進 code） */
-function postProcessClone(root){
-  if(mode!=='widget') return;
-  root.querySelectorAll('[style]').forEach(el=>{ const v=el.getAttribute('style'); const nv=widgetCss(v.replace(/\{\{[^{}]+\}\}/g,'60')); if(nv!==v){ el.setAttribute('data-cdbraw-style',v); el.setAttribute('style',nv); } });
-}
+/* 預覽後處理：小工具的 style 過濾已經在平台流程（platform.js）裡做了，這裡保留空殼給其他程式掛 */
+function postProcessClone(root){}
 /* 含 {{…}} 的 style 宣告，瀏覽器不認得、改屬性時會被吃掉 → 記下來，寫回時補上 */
 let tplDecls=new WeakMap();
 function rememberTplDecls(){

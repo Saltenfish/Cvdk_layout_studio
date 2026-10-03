@@ -3,25 +3,8 @@
 DRAWER_INFO.tpl=['小工具模板','完整的小工具，插入後再改'];
 DRAWER_INFO.conv=['畫布轉換','一般 div ⇄ 畫布，看各寬度的樣子'];
 
-/* —— 預覽用的簡易過濾（照目前頁面規則） —— */
-function cleanForPreview(html){
-  const t=document.createElement('template'); t.innerHTML=html;
-  (function walk(p){
-    [...p.childNodes].forEach(n=>{
-      if(n.nodeType===8){ n.remove(); return; }
-      if(n.nodeType!==1) return;
-      const tag=n.tagName.toLowerCase();
-      if(!ALLOWED_TAGS.has(tag)){
-        if(DROP_WITH_CONTENT.has(tag)){ n.remove(); return; }
-        walk(n); n.replaceWith(...n.childNodes); return;
-      }
-      [...n.attributes].forEach(a=>{ if(!attrOK(tag,a.name)) n.removeAttribute(a.name); });
-      if(mode==='widget'&&n.hasAttribute('style')) n.setAttribute('style',widgetCss(n.getAttribute('style').replace(/\{\{[^{}]+\}\}/g,'60')));
-      walk(n);
-    });
-  })(t.content);
-  return t.innerHTML;
-}
+/* —— 預覽：照目前頁面跑一次平台流程（DOMPurify ＋ marked） —— */
+function cleanForPreview(html){ return cdPlatformHTML(html,mode); }
 /* 把 html 等比縮小放進 box（base 寬度排版，再縮到 box 寬） */
 function fitPreview(box,html,baseW,maxH){
   box.innerHTML='';

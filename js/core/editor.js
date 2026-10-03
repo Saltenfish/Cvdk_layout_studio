@@ -147,45 +147,17 @@ function parseAndRender(keepSel){
     for(let k=si;k<Math.min(scan.length,si+4);k++){ if(scan[k].tag===t){found=k;break;} }
     if(found>=0){ ranges[ei]={start:scan[found].start,end:scan[found].end}; si=found+1; }
   }
-  // 9.3 建立淨化後的預覽
-  const clone=model.cloneNode(true);
+  // 9.3 建立預覽：照平台流程（DOMPurify 3.3.3 ＋ marked，和 CaveDuck 相同）
+  const {frag:clone,rep}=cdPlatformRender(model,modelEls);
   uid2clone=new Map();
-  const stripTagCount={}, stripAttrCount={};
-  sanitizeChildren(model,clone);
-  function sanitizeChildren(mParent,cParent){
-    const mk=[...mParent.childNodes], ck=[...cParent.childNodes];
-    for(let i=0;i<mk.length;i++){
-      const m=mk[i], c=ck[i];
-      if(m.nodeType!==1) continue;
-      sanitizeChildren(m,c);
-      const tag=m.tagName.toLowerCase();
-      const uid=modelEls.indexOf(m);
-      if(ALLOWED_TAGS.has(tag)){
-        c.setAttribute('data-cdbuid',uid);
-        for(const at of [...c.attributes]){
-          const nm=at.name;
-          if(nm==='data-cdbuid') continue;
-          if(attrOK(tag,nm)) continue;
-          stripAttrCount[tag+'['+nm+']']=(stripAttrCount[tag+'['+nm+']']||0)+1;
-          c.removeAttribute(nm);
-        }
-        if(tag==='a'){ const h=c.getAttribute('href')||''; if(/^\s*javascript:/i.test(h)){ c.removeAttribute('href'); warnings.push({lv:'err',msg:"<code>javascript:</code> 連結已被移除（CaveDuck 會擋）"}); } }
-      }else if(DROP_WITH_CONTENT.has(tag)){
-        stripTagCount[tag]=(stripTagCount[tag]||0)+1;
-        c.remove();
-      }else{
-        stripTagCount[tag]=(stripTagCount[tag]||0)+1;
-        const frag=document.createDocumentFragment();
-        while(c.firstChild) frag.appendChild(c.firstChild);
-        c.replaceWith(frag);
-      }
-    }
-  }
-  for(const [tag,n] of Object.entries(stripTagCount)){
-    const dropped=DROP_WITH_CONTENT.has(tag);
+  let mdOnly=0;
+  for(const [tag,n] of Object.entries(rep.tags)){
+    const dropped=CD_FORBID_CONTENTS.has(tag);
     warnings.push({lv:'err',msg:`<code>&lt;${tag}&gt;</code> 在${MODES[mode].name}<b>無效</b>（${n} 處${dropped?'，整段內容會消失':'，標籤被拆掉、內容保留'}）`});
+    if(mode==='info'&&CD_MD_ONLY.has(tag)) mdOnly++;
   }
-  for(const [k,n] of Object.entries(stripAttrCount)){
+  if(mdOnly) warnings.push({lv:'warn',msg:'角色介面直接寫的標題、清單、表格、code 會被刪，請改用 Markdown 寫法（# 標題、- 清單、| 表格 |、`code`）'});
+  for(const [k,n] of Object.entries(rep.attrs)){
     warnings.push({lv:'warn',msg:`屬性 <code>${k}</code> 不在白名單，會被移除（${n} 處）`});
   }
   // 9.4 其他檢查
@@ -482,6 +454,7 @@ pv.addEventListener('dblclick',e=>{
 obox.addEventListener('dblclick',()=>{ if(selectedUid>=0&&!editingText&&selNode()&&selNode().tagName!=='IMG') startTextEdit(selectedUid); });
 function startTextEdit(uid){
   const node=modelEls[uid], clone=uid2clone.get(uid); if(!node||!clone) return;
+  if(!cdEditable(uid,clone)){ toast('這段在平台上會被改寫（Markdown 或被刪掉的標籤），請直接在 code 裡改'); setCodeOpen(true); const rg=ranges[uid]; if(rg) flashCodeLine(rg.start,rg.end); return; }
   editingText=true; editCtx={uid,node,clone};
   ovl.classList.remove('on');
   clone.setAttribute('contenteditable','true');
