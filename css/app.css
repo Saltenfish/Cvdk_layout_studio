@@ -262,8 +262,7 @@ select.tin{padding:5px 6px}
 /* code 定位發光條 */
 #codeFlash{position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:5;opacity:0;transition:opacity .45s}
 #codeFlash.on{opacity:1;transition:opacity .1s}
-#codeFlash>b{position:absolute;left:0;right:0;background:linear-gradient(90deg,rgba(240,176,60,.26),rgba(240,176,60,.07));box-shadow:0 0 14px rgba(240,176,60,.45)}
-#codeFlash>i{position:absolute;border-radius:3px;background:rgba(240,176,60,.34);box-shadow:0 0 0 1px rgba(240,176,60,.7),0 0 12px rgba(240,176,60,.55)}
+#codeFlash>i{position:absolute;background:rgba(240,176,60,.3);box-shadow:0 0 10px rgba(240,176,60,.5)}
 :root[data-theme=light] #codeFlash>i{background:rgba(255,200,0,.42)}
 #codewrap{position:relative}
 #code.wrap{white-space:pre-wrap;word-break:break-word}
@@ -498,6 +497,7 @@ details.acat>summary .ac{margin-left:auto;font-size:10.5px;color:var(--faint)}
 #gutterCode:hover,#gutterCode.drag{background:var(--accent)}
 #codebar{gap:6px;padding:5px 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 #codebar .tbtn{padding:3px 9px;font-size:11px;white-space:nowrap;flex:0 0 auto}
+#codebar select.tbtn{padding:3px 4px;max-width:112px;cursor:pointer}
 #codebar .cgap{flex:1}
 #codeChars{margin-right:0}
 
@@ -761,7 +761,6 @@ body.panMode #pv .cdb-sel,body.panMode #pv{cursor:move}
 #codeMarks.on{opacity:1;transition:opacity .08s}
 #codeMarks i{position:absolute;border-radius:3px;background:rgba(240,176,60,.38);box-shadow:0 0 0 1px rgba(240,176,60,.75),0 0 12px rgba(240,176,60,.55)}
 :root[data-theme=light] #codeMarks i{background:rgba(255,200,0,.45)}
-#codeMirror{position:absolute;left:-99999px;top:0;visibility:hidden;overflow:hidden;height:auto}
 .srow.adj{background:var(--mode-dim);border-radius:6px;box-shadow:0 0 0 1px var(--mode-line),0 0 14px var(--mode-dim)}
 .srow.adj .sval{color:var(--mode);font-weight:700;text-shadow:0 0 8px var(--mode)}
 .srow.adj label{color:var(--mode)}

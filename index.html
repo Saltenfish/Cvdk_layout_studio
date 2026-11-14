@@ -348,7 +348,7 @@
           <button class="tbtn hideable" id="btnWrap" title="切換：一行到底 / 自動換行（只是顯示，不改內容）">↩ 自動換行</button>
           <button class="tbtn hideable" id="btnTidy" title="整份程式碼正規化為單引號屬性（CaveDuck 建議格式）">✒ 單引號化</button>
           <button class="tbtn hideable" id="btnCopyCode" title="複製整份 HTML">⧉ 複製全部</button>
-          <button class="tbtn hideable" id="btnSqueeze" title="連續兩行以上的空白行壓成一行（CaveDuck 遇到連續空白行會截斷）">⇣ 壓縮空行</button>
+          <select class="tbtn hideable" id="selBreak" title="整理 code 的換行（只動換行、不動內容，可用復原退回）。CaveDuck 遇到連續空白行會截斷"><option value="">⇣ 換行整理</option><option value="tags">每個標籤一行</option><option value="blocks">大區塊一行</option><option value="none">完全不換行</option><option value="squeeze">壓縮空行</option></select>
           <button class="tbtn hideable" id="btnNoComment" title="移除所有 <!-- --> 註解">清註解</button>
           <button class="tbtn warn2 hideable" id="btnClear">清空</button>
         </div>

@@ -56,12 +56,137 @@ armTwice($('#rsLayout'),()=>{
 
 /* code 列：複製全部／壓縮空行 */
 $('#btnCopyCode').addEventListener('click',()=>{ if(!codeEl.value.trim()){ toast('目前沒有內容可複製'); return; } copyText(codeEl.value,'<b>已複製</b>整份 HTML'); });
-$('#btnSqueeze').addEventListener('click',()=>{
-  const v=codeEl.value; let n=0;
-  const out=v.replace(/\r\n/g,'\n').replace(/\n[ \t]*\n(?:[ \t]*\n)+/g,()=>{ n++; return '\n\n'; });
-  if(!n){ toast('沒有連續的空白行'); return; }
-  pushUndo(); codeEl.value=out; parseAndRender(); toast('<b>已壓縮</b> '+n+' 處連續空白行');
-});
+/* —— 換行整理：只動換行，不動內容 ——
+   tags   每個標籤一行（把一長串展開，方便閱讀）
+   blocks 大區塊一行（每個大區塊自己一行，裡面不換行）
+   none   完全不換行
+   squeeze 連續空白行壓成一行
+   只在「換不換行都不影響顯示」的地方動手：行內元素（span、b、inline-block…）之間的空白會變成間距，
+   white-space:pre 的內容、最外層直接寫的 Markdown 文字也都不碰。不加縮排（Markdown 會把行首 4 個空白當成 code）。 */
+const BRK_BLOCK=new Set(['div','p','section','article','header','footer','nav','aside','figure','figcaption','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col','blockquote','pre','dl','dt','dd','details','summary','hr','br','form','fieldset','main','address']);
+const BRK_PRE=new Set(['pre','textarea','script','style','xmp','plaintext']);
+function brkTokens(src){
+  const T=[]; const n=src.length; let i=0;
+  const text=(a,b)=>{ if(b>a) T.push({t:'text',s:src.slice(a,b)}); };
+  while(i<n){
+    const lt=src.indexOf('<',i); if(lt<0){ text(i,n); break; }
+    let end=-1, tok=null;
+    if(src.startsWith('<!--',lt)){ const e=src.indexOf('-->',lt+4); end=e<0?n:e+3; tok={t:'other'}; }
+    else if(src[lt+1]==='!'||src[lt+1]==='?'){ const e=src.indexOf('>',lt); end=e<0?n:e+1; tok={t:'other'}; }
+    else if(src[lt+1]==='/'){ const m=/^<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>/.exec(src.slice(lt,lt+80)); if(m){ end=lt+m[0].length; tok={t:'close',name:m[1].toLowerCase()}; } }
+    else { const m=/^<([a-zA-Z][a-zA-Z0-9-]*)/.exec(src.slice(lt,lt+80));
+      if(m){ let j=lt+m[0].length, q=null;
+        while(j<n){ const c=src[j]; if(q){ if(c===q) q=null; } else if(c==="'"||c==='"') q=c; else if(c==='>') break; j++; }
+        end=j<n?j+1:n; const name=m[1].toLowerCase(); const raw=src.slice(lt,end);
+        const st=((/\sstyle\s*=\s*(['"])([\s\S]*?)\1/i.exec(raw)||[])[2]||'').toLowerCase();
+        tok={t:'open',name,style:st,void:VOID_TAGS.has(name)||src[end-2]==='/'}; } }
+    if(end<0){ text(i,lt+1); i=lt+1; continue; }
+    text(i,lt); tok.s=src.slice(lt,end); T.push(tok); i=end;
+    if(tok.t==='open'&&!tok.void&&(tok.name==='script'||tok.name==='style'||tok.name==='textarea'||tok.name==='xmp'||tok.name==='plaintext')){
+      const m=new RegExp('</'+tok.name+'\\s*>','i').exec(src.slice(i)); const e=m?i+m.index:n;
+      if(e>i) T.push({t:'raw',s:src.slice(i,e)}); i=e; }
+  }
+  // 合併相鄰的文字
+  const out=[]; for(const k of T){ const p=out[out.length-1]; if(k.t==='text'&&p&&p.t==='text') p.s+=k.s; else out.push(k); }
+  return out;
+}
+function brkIsBlock(name,style){
+  const d=(/(?:^|;)\s*display\s*:\s*([a-z-]+)/.exec(style)||[])[1];
+  if(d){ if(d.startsWith('inline')||d==='contents') return false; return true; }
+  if(/(?:^|;)\s*position\s*:\s*(absolute|fixed)/.test(style)) return true;
+  return BRK_BLOCK.has(name);
+}
+function reflowCode(src,mode){
+  src=src.replace(/\r\n?/g,'\n');
+  const T=brkTokens(src);
+  // 每個 token 標上：所在深度、是否在 pre 內、父層是不是 flex/grid、是不是區塊
+  const stack=[];
+  const TOP={hasBlock:true};
+  const ctx=()=>({depth:stack.length,pre:stack.some(x=>x.pre),flex:!!(stack.length&&stack[stack.length-1].flex),cont:stack.length?stack[stack.length-1]:TOP});
+  for(const k of T){
+    if(k.t==='open'){
+      Object.assign(k,ctx()); k.block=brkIsBlock(k.name,k.style);
+      if(k.block&&k.name!=='br') k.cont.hasBlock=true; // 這個容器裡有區塊 → 裡面可以一個一行
+      if(!k.void) stack.push({name:k.name,block:k.block,pre:BRK_PRE.has(k.name)||/white-space\s*:\s*(pre|break-spaces)/.test(k.style),flex:/(?:^|;)\s*display\s*:\s*(inline-)?(flex|grid)/.test(k.style)});
+    } else if(k.t==='close'){
+      let s=-1; for(let x=stack.length-1;x>=0;x--){ if(stack[x].name===k.name){ s=x; break; } }
+      if(s>=0){ k.block=stack[s].block; stack.length=s; } else k.block=BRK_BLOCK.has(k.name);
+      Object.assign(k,ctx());
+    } else Object.assign(k,ctx(),{block:false});
+    k.after=ctx(); // 這個 token 之後（到下一個 token 之前）所在的環境
+  }
+  const isTag=k=>k&&(k.t==='open'||k.t==='close'||k.t==='other');
+  // 這個空隙換不換行都不影響顯示？
+  const safe=(A,B,g)=>!g.pre&&isTag(A)&&isTag(B)&&(g.flex||A.block||B.block);
+  // 只有「裡面有區塊」的容器才拆行；只裝文字和行內元素的（例：<div>文字 <b>粗體</b></div>）維持一行
+  const brk=g=>(mode==='tags'&&g.cont.hasBlock)||(mode==='blocks'&&g.depth<=D&&g.cont.hasBlock);
+  // 大區塊模式：只有一個最外層元素時，往裡一層切
+  let D=0;
+  if(mode==='blocks'){
+    const top=T.filter(k=>k.depth===0&&!(k.t==='text'&&!k.s.trim())&&k.t!=='other');
+    const opens=top.filter(k=>k.t==='open');
+    if(opens.length===1&&!opens[0].void&&top.every(k=>k.t==='open'||k.t==='close')) D=1;
+  }
+  const NL=/[ \t]*\n[ \t\n]*/g;
+  let out='';
+  for(let i=0;i<T.length;i++){
+    const k=T[i], A=T[i-1], B=T[i+1];
+    if(k.t==='raw'){ out+=k.s; continue; }
+    if(k.t!=='text'){
+      // 標籤裡的換行（屬性分行寫）：完全不換行／大區塊模式時接回一行
+      out+=(mode!=='tags'&&!k.pre&&k.t!=='other'&&k.s.includes('\n'))?k.s.replace(NL,' '):k.s;
+      // 兩個標籤緊貼：需要的地方補換行
+      if(isTag(B)&&safe(k,B,k.after)){
+        if(brk(k.after)) out+='\n';
+      }
+      continue;
+    }
+    if(k.pre){ out+=k.s; continue; }
+    const blank=!k.s.trim();
+    if(blank){
+      if(safe(A,B,k)||(!A&&isTag(B))||(isTag(A)&&!B)){
+        if(!A||!B){ out+=''; continue; }               // 開頭／結尾的空白直接拿掉
+        out+=brk(k)?'\n':'';
+      } else if(k.depth===0||!k.s.includes('\n')) out+=k.s;
+      else out+=mode==='tags'?'\n':' ';              // 行內元素之間：留一個空白（或一個換行），不加縮排
+      continue;
+    }
+    // 有內容的文字：最外層（可能是 Markdown）不碰
+    if(k.depth===0||!k.s.includes('\n')){ out+=k.s; continue; }
+    if(mode==='tags'){ out+=k.s.replace(/[ \t]*\n[ \t]*/g,'\n'); continue; } // 只拿掉縮排，換行留著
+    let s=k.s;
+    const lead=/^[ \t]*\n[ \t\n]*/.exec(s); if(lead) s=((isTag(A)&&(A.block||k.flex))?'':' ')+s.slice(lead[0].length);
+    const tail=/[ \t]*\n[ \t\n]*$/.exec(s); if(tail) s=s.slice(0,tail.index)+((isTag(B)&&(B.block||k.flex))?'':' ');
+    out+=s.replace(NL,' ');
+  }
+  return out;
+}
+/* 預覽的「指紋」：結構＋看得到的文字（空白算一個）。換行前後不一樣就代表顯示變了 */
+function pvSignature(){ return pv.innerHTML.replace(/\sdata-cdbuid="\d+"/g,'').replace(/\bcdb-[\w-]+/g,'').replace(/\sclass="\s*"/g,'').replace(/\s+/g,'')+'\u0001'+(pv.innerText||'').replace(/\s+/g,' ').trim(); }
+function applyReflow(mode){
+  const v=codeEl.value;
+  if(!v.trim()){ toast('目前沒有內容'); return; }
+  let out, n=0;
+  if(mode==='squeeze'){
+    out=v.replace(/\r\n/g,'\n').replace(/\n[ \t]*\n(?:[ \t]*\n)+/g,()=>{ n++; return '\n\n'; });
+    if(!n){ toast('沒有連續的空白行'); return; }
+    pushUndo(); codeEl.value=out; parseAndRender(); toast('<b>已壓縮</b> '+n+' 處連續空白行'); return;
+  }
+  out=reflowCode(v,mode);
+  if(out===v){ toast('已經是這個排法了'); return; }
+  clearSelection();
+  const before=pvSignature();
+  pushUndo(); codeEl.value=out; parseAndRender();
+  if(pvSignature()!==before){
+    // 保險：萬一換行會改變平台上的顯示（例如 Markdown 把換行變成 <br>），就還原不動
+    codeEl.value=v; parseAndRender(); undoStack.pop();
+    toast('這份內容換行後顯示會改變，已保持原樣');
+    return;
+  }
+  const lines=out.split('\n').length;
+  toast({tags:'<b>已展開</b>：每個標籤一行',blocks:'<b>已整理</b>：每個大區塊一行',none:'<b>已接成</b>不換行'}[mode]+'（共 '+lines+' 行）');
+}
+{ const sb=$('#selBreak'); if(sb) sb.addEventListener('change',()=>{ const m=sb.value; sb.value=''; if(m) applyReflow(m); }); }
 
 /* ═══════════ 29. v3.8：手機版（≤760px）═══════════ */
 const MQ_MOBILE=matchMedia('(max-width:760px)');
@@ -700,19 +825,8 @@ buildFormGrid();
 (function(){
   const wrap=$('#codewrap'); if(!wrap) return;
   const layer=document.createElement('div'); layer.id='codeMarks'; wrap.appendChild(layer);
-  const mirror=document.createElement('div'); mirror.id='codeMirror'; document.body.appendChild(mirror);
   let hideT=null;
-  function rectsOf(start,end){
-    const cs=getComputedStyle(codeEl);
-    ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','whiteSpace','wordBreak','overflowWrap','wordWrap','textIndent','boxSizing','borderTopWidth','borderLeftWidth','borderRightWidth'].forEach(k=>mirror.style[k]=cs[k]);
-    mirror.style.width=codeEl.clientWidth+'px';
-    const v=codeEl.value;
-    mirror.textContent=v.slice(0,start);
-    const sp=document.createElement('span'); sp.textContent=v.slice(start,end)||' '; mirror.appendChild(sp);
-    mirror.appendChild(document.createTextNode(v.slice(end,end+200)));
-    const mr=mirror.getBoundingClientRect();
-    return [...sp.getClientRects()].map(r=>({x:r.left-mr.left,y:r.top-mr.top,w:r.width,h:r.height}));
-  }
+  const rectsOf=(start,end)=>codeRects(start,end).rects; // 和「點選發光」共用同一套量測
   window.markCode=function(start,end){
     if($('#stage').classList.contains('codeClosed')||end<=start) return;
     requestAnimationFrame(()=>{
