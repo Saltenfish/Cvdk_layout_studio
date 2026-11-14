@@ -48,7 +48,9 @@ function populateProps(){
   const cls=(animEl.getAttribute('class')||'').split(/\s+/).filter(Boolean);
   const animName=cls.map(x=>/^animate__(?!animated$|infinite$|slow$|slower$|fast$|faster$|delay)(.+)/.exec(x)).filter(Boolean).map(m=>m[1]).find(x=>ANIM_NAMES.has(x))||'';
   $('#inAnim').value=animName;
-  $('#inAnimSpeed').value=cls.find(x=>['animate__slow','animate__slower','animate__fast','animate__faster'].includes(x))||'';
+  const customDur=cssSec(animEl.style.animationDuration);
+  $('#inAnimSpeed').value=customDur?'custom':(cls.find(x=>['animate__slow','animate__slower','animate__fast','animate__faster'].includes(x))||'');
+  $('#animDur').value=customDur||SPEED_SEC[$('#inAnimSpeed').value]||1;
   $('#inAnimInf').checked=cls.includes('animate__infinite');
   $('#inStyle').value=n.getAttribute('style')||'';
   renderDecoColors();
@@ -148,6 +150,12 @@ bindSlider('#inScale','#nScale',
 const ANIM_NAMES=new Set(ANIMS.flatMap(g=>g.list.map(x=>x[0])));
 const POS_PROPS=['position','top','left','right','bottom','width','height','max-width','z-index','margin'];
 function hasAnimCls(n){ return /(^|\s)animate__/.test(n.getAttribute('class')||''); }
+/* 動畫時長：預設速度用 class；自訂秒數寫成行內 animation-duration */
+const SPEED_SEC={'':1,'animate__slow':2,'animate__slower':3,'animate__fast':0.8,'animate__faster':0.5};
+function cssSec(v){ const m=/^\s*([\d.]+)\s*(ms|s)\s*$/.exec(v||''); if(!m) return 0; const n=parseFloat(m[1])/(m[2]==='ms'?1000:1); return n>0?Math.round(n*1000)/1000:0; }
+function animElOf(n){ return hasAnimCls(n)?n:((n.children.length===1&&hasAnimCls(n.firstElementChild))?n.firstElementChild:n); }
+function dropStyleProp(el,prop){ el.style.removeProperty(prop); if(!(el.getAttribute('style')||'').trim()) el.removeAttribute('style'); }
+function animDurVal(){ if($('#inAnimSpeed').value!=='custom') return 0; const v=parseFloat($('#animDur').value); return v>0?v:0; }
 function hasRS(n){ return /(rotate|scale)\(/.test(n.style.transform||''); }
 function stripAnimCls(el){
   if(!el) return [];
@@ -186,24 +194,49 @@ function transformHostFor(node){ // transform 要設在哪：node 有動畫 → 
   if(!hasAnimCls(node)) return node;
   if(node.tagName==='IMG'){ const w=wrapImgOut(node); return w; }
   const anim=stripAnimCls(node);
-  addCls(innerOf(node),anim);
+  const inner=innerOf(node);
+  addCls(inner,anim);
+  // 時長／延遲要跟著動畫一起下放到內層，否則會失效
+  ['animation-duration','animation-delay'].forEach(p=>{ const v=node.style.getPropertyValue(p); if(v){ inner.style.setProperty(p,v); dropStyleProp(node,p); } });
   return node;
 }
-function applyAnimTo(node,name,speed,inf){
+function applyAnimTo(node,name,speed,inf,dur){
+  // 延遲跟著動畫走：先記下來，等一下掛到新的動畫元素上
+  const oldEl=animElOf(node);
+  const delay=oldEl.style.getPropertyValue('animation-delay')||node.style.getPropertyValue('animation-delay');
+  [node,oldEl].forEach(el=>{ dropStyleProp(el,'animation-duration'); dropStyleProp(el,'animation-delay'); });
   stripAnimCls(node);
   if(node.firstElementChild&&node.children.length===1&&hasAnimCls(node.firstElementChild)) stripAnimCls(node.firstElementChild);
   if(name){
     const target=animTargetFor(node);
-    const cls=['animate__animated','animate__'+name]; if(speed) cls.push(speed); if(inf) cls.push('animate__infinite');
+    const custom=speed==='custom'&&dur>0;
+    const cls=['animate__animated','animate__'+name]; if(speed&&speed!=='custom') cls.push(speed); if(inf) cls.push('animate__infinite');
     addCls(target,cls);
+    if(custom) target.style.setProperty('animation-duration',dur+'s');
+    if(delay) target.style.setProperty('animation-delay',delay);
   }
   writeback(node);
 }
-function propAnimChanged(){ const n=selNode(); if(!n||filling)return; applyAnimTo(n,$('#inAnim').value,$('#inAnimSpeed').value,$('#inAnimInf').checked); }
+function propAnimChanged(){ const n=selNode(); if(!n||filling)return; if(!$('#inAnim').value) return; /* 還沒套動畫：先記在面板上，套用時才寫進去 */ applyAnimTo(n,$('#inAnim').value,$('#inAnimSpeed').value,$('#inAnimInf').checked,animDurVal()); }
 $('#inAnim').addEventListener('change',propAnimChanged);
-$('#inAnimSpeed').addEventListener('change',propAnimChanged);
+$('#inAnimSpeed').addEventListener('change',()=>{
+  const v=$('#inAnimSpeed').value;
+  if(v==='custom'){ const d=$('#animDur'); try{ d.focus(); d.select(); }catch(e){} }
+  else $('#animDur').value=SPEED_SEC[v]||1;
+  propAnimChanged();
+});
+/* 時長：手動輸入秒數（剛好等於預設速度就用 class，其他寫成 animation-duration） */
+$('#animDur').addEventListener('change',()=>{
+  const d=$('#animDur'); let v=parseFloat(d.value);
+  if(!(v>0)) v=1;
+  v=Math.min(600,Math.max(0.05,Math.round(v*100)/100));
+  d.value=v;
+  const preset=Object.keys(SPEED_SEC).find(k=>SPEED_SEC[k]===v);
+  $('#inAnimSpeed').value=preset!=null?preset:'custom';
+  propAnimChanged();
+});
 $('#inAnimInf').addEventListener('change',propAnimChanged);
-$('#inAnimClear').addEventListener('click',()=>{ const n=selNode(); if(!n)return; applyAnimTo(n,'',null,false); toast('已移除動畫 class'); });
+$('#inAnimClear').addEventListener('click',()=>{ const n=selNode(); if(!n)return; applyAnimTo(n,'',null,false,0); toast('已移除動畫 class'); });
 
 /* 面板動作 */
 $('#pbSelectCode').addEventListener('click',()=>{

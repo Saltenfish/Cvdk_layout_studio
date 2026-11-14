@@ -156,7 +156,8 @@
           <details class="ps" data-g="anim"><summary><span class="si">✺</span>動畫<span class="sv" id="svAnim"></span></summary><div class="psb">
             <div class="animNow"><span>目前：</span><b id="animNowName">無</b><button class="mbtn" id="inAnimClear">移除</button></div>
             <div class="animOpts">
-              <label class="fld"><span>速度</span><select class="tin" id="inAnimSpeed"><option value="">1 秒</option><option value="animate__slow">2 秒</option><option value="animate__slower">3 秒</option><option value="animate__fast">0.8 秒</option><option value="animate__faster">0.5 秒</option></select></label>
+              <label class="fld"><span>速度</span><select class="tin" id="inAnimSpeed"><option value="">1 秒</option><option value="animate__slow">2 秒</option><option value="animate__slower">3 秒</option><option value="animate__fast">0.8 秒</option><option value="animate__faster">0.5 秒</option><option value="custom">自訂</option></select></label>
+              <label class="fld"><span>時長（秒）</span><input class="tin" id="animDur" type="number" min="0.05" step="0.1" value="1" title="動畫播一次要幾秒，可以直接輸入（例：1.5）"></label>
               <label class="fld"><span>延遲（秒）</span><input class="tin" id="animDelay" type="number" min="0" step="0.1" value="0"></label>
               <label class="chk"><input type="checkbox" id="inAnimInf"> 無限重複</label>
             </div>

@@ -260,8 +260,11 @@ select.tin{padding:5px 6px}
   repeating-conic-gradient(var(--chk1) 0% 25%,var(--chk2) 0% 50%) 0 0/8px 8px}
 .cchip>i{display:block;width:100%;height:100%;border-radius:4px}
 /* code 定位發光條 */
-#codeFlash{position:absolute;left:0;right:0;height:0;pointer-events:none;z-index:5;background:linear-gradient(90deg,rgba(240,176,60,.42),rgba(240,176,60,.12));box-shadow:0 0 14px rgba(240,176,60,.6);opacity:0;transition:opacity .12s}
-#codeFlash.on{opacity:1}
+#codeFlash{position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:5;opacity:0;transition:opacity .45s}
+#codeFlash.on{opacity:1;transition:opacity .1s}
+#codeFlash>b{position:absolute;left:0;right:0;background:linear-gradient(90deg,rgba(240,176,60,.26),rgba(240,176,60,.07));box-shadow:0 0 14px rgba(240,176,60,.45)}
+#codeFlash>i{position:absolute;border-radius:3px;background:rgba(240,176,60,.34);box-shadow:0 0 0 1px rgba(240,176,60,.7),0 0 12px rgba(240,176,60,.55)}
+:root[data-theme=light] #codeFlash>i{background:rgba(255,200,0,.42)}
 #codewrap{position:relative}
 #code.wrap{white-space:pre-wrap;word-break:break-word}
 #codeChars{font-size:10.5px;color:var(--faint);font-family:var(--mono);margin-right:auto;padding-left:4px}
@@ -440,7 +443,7 @@ details.ps>summary:hover{background:var(--panel2)}
 .animNow{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:10px;font-size:12px}
 .animNow b{color:var(--mode);font-weight:500}
 .animNow .mbtn{margin-left:auto;flex:0 0 auto;padding:2px 9px}
-.animOpts{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:8px;align-items:end;margin-bottom:10px}
+.animOpts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:end;margin-bottom:10px}
 .animOpts .chk{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted);padding-bottom:7px;white-space:nowrap}
 details.acat{border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--panel2);overflow:hidden}
 details.acat>summary{list-style:none;cursor:pointer;padding:8px 10px;font-size:12px;display:flex;align-items:center;gap:6px}

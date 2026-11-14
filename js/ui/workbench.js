@@ -145,9 +145,10 @@ function openColorSection(){
       b.innerHTML=`<span>${esc(zh)}</span><small>${nm}</small>`;
       b.addEventListener('click',()=>{
         const n=selNode(); if(!n){ toast('先在預覽中點選一個元素'); return; }
-        applyAnimTo(n,nm,$('#inAnimSpeed').value,$('#inAnimInf').checked);
-        const dl=parseFloat($('#animDelay').value)||0; const cur=selNode();
-        if(cur&&dl>0){ cur.style.setProperty('animation-delay',dl+'s'); writeback(cur); }
+        const dl=parseFloat($('#animDelay').value)||0;
+        // 延遲寫在動畫元素上（applyAnimTo 會帶到新的動畫元素）
+        const ae=animElOf(n); if(dl>0) ae.style.setProperty('animation-delay',dl+'s'); else { dropStyleProp(ae,'animation-delay'); dropStyleProp(n,'animation-delay'); }
+        applyAnimTo(n,nm,$('#inAnimSpeed').value,$('#inAnimInf').checked,animDurVal());
         toast('<b>動畫</b> '+zh);
       });
       grid.appendChild(b);
@@ -157,7 +158,10 @@ function openColorSection(){
   tools.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const o=b.dataset.t==='open'; cats.forEach(d=>d.open=o); });
   $('#animDelay').addEventListener('change',()=>{
     const n=selNode(); if(!n) return; const dl=parseFloat($('#animDelay').value)||0;
-    if(dl>0) n.style.setProperty('animation-delay',dl+'s'); else n.style.removeProperty('animation-delay');
+    if(!hasAnimCls(animElOf(n))) return; // 還沒套動畫：套用時才寫進去
+    const ae=animElOf(n);
+    if(ae!==n) dropStyleProp(n,'animation-delay');
+    if(dl>0) ae.style.setProperty('animation-delay',dl+'s'); else dropStyleProp(ae,'animation-delay');
     writeback(n);
   });
 })();
@@ -186,7 +190,7 @@ function openColorSection(){
     $('#animNowName').textContent=nm?(opt?opt.textContent:nm):'無';
     $('#svAnim').textContent=nm?(opt?opt.textContent:nm):'';
     $$('#animList .agrid button').forEach(b=>b.classList.toggle('on',b.dataset.a===nm));
-    const dl=/([\d.]+)s/.exec(st.animationDelay||''); $('#animDelay').value=dl?dl[1]:0;
+    $('#animDelay').value=nm?(cssSec(animElOf(n).style.animationDelay)||cssSec(st.animationDelay)||0):0;
     $$('#tabs button[data-tab=props]').forEach(b=>b.classList.add('hasSel'));
     syncColorUI();
   };

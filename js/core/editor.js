@@ -13,6 +13,7 @@ function load(k){ try{ return localStorage.getItem(k); }catch(e){ return null; }
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* ═══════════ 6. 掃描器：找出原始碼中每個元素的字元範圍 ═══════════ */
+const RAW_TEXT_TAGS=new Set(['script','style','textarea','title','xmp','noscript','iframe','noembed','noframes','plaintext']);
 function scanRanges(src){
   const out=[]; const stack=[]; let i=0; const n=src.length;
   while(i<n){
@@ -44,8 +45,15 @@ function scanRanges(src){
     }
     const openEnd=(j<n)?j+1:n;
     const selfClosed=src[j-1]==='/';
+    // <html>/<head>/<body> 貼進來會被瀏覽器丟掉，不算元素（否則後面的定位會錯位）
+    if(name==='html'||name==='head'||name==='body'){ i=openEnd; continue; }
     const rec={tag:name,start:lt,end:openEnd};
     out.push(rec);
+    // 純文字內容的標籤：裡面的 < 不是標籤，整段跳過
+    if(RAW_TEXT_TAGS.has(name)&&!selfClosed){
+      const re=new RegExp('</'+name+'\\s*>','i'); const mm=re.exec(src.slice(openEnd));
+      rec.end=mm?openEnd+mm.index+mm[0].length:n; i=rec.end; continue;
+    }
     if(!VOID_TAGS.has(name)&&!selfClosed) stack.push({tag:name,rec});
     i=openEnd;
   }
@@ -229,40 +237,81 @@ function applySelection(uid,opt){
   $('#props').classList.add('hasSel');
   populateProps();
   const r=ranges[uid];
-  if(r&&document.activeElement!==codeEl){ try{ codeEl.setSelectionRange(r.start,r.end); cursorTouched=true; scrollCodeTo(r.start); }catch(e){} }
+  if(r&&document.activeElement!==codeEl){ try{ codeEl.setSelectionRange(r.start,r.end); cursorTouched=true; }catch(e){} }
   if(r) flashCodeLine(r.start,r.end);
   markTreeSel();
   updateTreeTools();
   positionOverlay();
 }
-let flashTimer=null;
+/* —— code 定位：用「鏡像」量出文字真正的位置（自動換行、一行到底、很長的一行都算得準）—— */
+let codeMirrorEl=null;
+function codeRects(start,end){
+  const v=codeEl.value;
+  start=Math.max(0,Math.min(start,v.length)); end=Math.max(start,Math.min(end,v.length));
+  if(!codeMirrorEl){ codeMirrorEl=document.createElement('div'); codeMirrorEl.setAttribute('aria-hidden','true');
+    codeMirrorEl.style.cssText='position:absolute;left:-99999px;top:0;visibility:hidden;overflow:hidden;height:auto;border:0;margin:0;box-sizing:border-box'; document.body.appendChild(codeMirrorEl); }
+  const m=codeMirrorEl, cs=getComputedStyle(codeEl);
+  ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','whiteSpace','wordBreak','overflowWrap','textIndent'].forEach(k=>m.style[k]=cs[k]);
+  m.style.width=codeEl.clientWidth+'px';
+  m.textContent=v.slice(0,start);
+  const sp=document.createElement('span'); sp.textContent=v.slice(start,end)||'​'; m.appendChild(sp);
+  m.appendChild(document.createTextNode(v.slice(end,end+400)));
+  const mr=m.getBoundingClientRect();
+  const lh=parseFloat(cs.lineHeight)||19;
+  return {lh,rects:[...sp.getClientRects()].filter(r=>r.width>0||r.height>0).map(r=>({x:r.left-mr.left,y:r.top-mr.top,w:r.width,h:r.height}))};
+}
+/* 開標籤的結尾（跳過引號裡的 >） */
+function openTagEnd(start,end){
+  const v=codeEl.value; let q=null;
+  for(let j=start;j<end;j++){ const c=v[j]; if(q){ if(c===q) q=null; } else if(c==="'"||c==='"') q=c; else if(c==='>') return j+1; }
+  return end;
+}
+/* 把 code 捲到看得到 start~end 的地方（上下、左右都會捲） */
+function revealCode(start,end,m){
+  m=m||codeRects(start,end); const rs=m.rects; if(!rs.length) return m;
+  const half=(m.lh-rs[0].h)/2;
+  const top=rs[0].y-half, bot=rs[rs.length-1].y+rs[rs.length-1].h+half;
+  const vh=codeEl.clientHeight, st=codeEl.scrollTop;
+  if(top<st+2||top>st+vh-m.lh*2||(bot>st+vh&&bot-top<=vh-4)) codeEl.scrollTop=Math.max(0,(bot-top<=vh*0.6)?top-vh*0.35:top-m.lh);
+  const vw=codeEl.clientWidth, sl=codeEl.scrollLeft, lx=rs[0].x;
+  if(lx<sl+8||lx>sl+vw*0.7) codeEl.scrollLeft=Math.max(0,lx-vw*0.25);
+  return m;
+}
+let flashTimer=null, flashGeo=null;
+function placeCodeFlash(){
+  const fl=$('#codeFlash'); if(!fl||!flashGeo) return;
+  // 發光層剛好蓋住 code 的可視範圍，超出的部分會被裁掉（不會蓋到工具列或溢出面板）
+  fl.style.top=codeEl.offsetTop+'px'; fl.style.left=codeEl.offsetLeft+'px';
+  fl.style.width=codeEl.clientWidth+'px'; fl.style.height=codeEl.clientHeight+'px';
+  const sx=codeEl.scrollLeft, sy=codeEl.scrollTop;
+  const band=fl.firstElementChild;
+  band.style.top=(flashGeo.top-sy)+'px'; band.style.height=(flashGeo.bot-flashGeo.top)+'px';
+  [...fl.children].slice(1).forEach((d,i)=>{ const r=flashGeo.tag[i]; if(!r) return; d.style.left=(r.x-sx-2)+'px'; d.style.top=(r.y-sy)+'px'; d.style.width=(r.w+4)+'px'; d.style.height=r.h+'px'; });
+}
 function flashCodeLine(start,end){
   if($('#stage').classList.contains('codeClosed')) return;
   const fl=$('#codeFlash'); if(!fl) return;
-  const val=codeEl.value;
-  const lh=parseFloat(getComputedStyle(codeEl).lineHeight)||19;
-  const line0=(val.slice(0,start).match(/\n/g)||[]).length;
-  const line1=(val.slice(0,end).match(/\n/g)||[]).length;
-  const lines=Math.max(1,line1-line0+1);
-  const padTop=parseFloat(getComputedStyle(codeEl).paddingTop)||0;
   requestAnimationFrame(()=>{
-    const y=codeEl.offsetTop+padTop+line0*lh-codeEl.scrollTop;
-    fl.style.top=y+'px'; fl.style.height=(lines*lh)+'px';
+    if(end>codeEl.value.length||!codeEl.clientHeight) return;
+    const whole=codeRects(start,end); if(!whole.rects.length) return;
+    revealCode(start,end,whole);
+    const rs=whole.rects, half=(whole.lh-rs[0].h)/2;
+    const tag=codeRects(start,openTagEnd(start,end)).rects;
+    flashGeo={top:rs[0].y-half, bot:rs[rs.length-1].y+rs[rs.length-1].h+half, tag};
+    fl.replaceChildren(document.createElement('b'),...tag.map(()=>document.createElement('i')));
+    placeCodeFlash();
     fl.classList.add('on');
-    clearTimeout(flashTimer); flashTimer=setTimeout(()=>fl.classList.remove('on'),750);
+    clearTimeout(flashTimer); flashTimer=setTimeout(()=>{ fl.classList.remove('on'); },900);
   });
 }
+codeEl.addEventListener('scroll',()=>{ if(flashGeo&&$('#codeFlash').classList.contains('on')) placeCodeFlash(); },{passive:true});
+codeEl.addEventListener('input',()=>{ const fl=$('#codeFlash'); if(fl) fl.classList.remove('on'); flashGeo=null; });
 function clearSelection(){
   const prev=$('#pv .cdb-sel'); if(prev) prev.classList.remove('cdb-sel');
   selectedUid=-1; $('#props').classList.remove('hasSel'); markTreeSel(); updateTreeTools();
   try{ positionOverlay(); }catch(e){}
 }
-function scrollCodeTo(pos){
-  const upto=codeEl.value.slice(0,pos);
-  const line=(upto.match(/\n/g)||[]).length;
-  const lh=parseFloat(getComputedStyle(codeEl).lineHeight)||19;
-  codeEl.scrollTop=Math.max(0,line*lh-codeEl.clientHeight*0.35);
-}
+function scrollCodeTo(pos){ revealCode(pos,Math.min(codeEl.value.length,pos+1)); }
 
 /* 預覽互動：hover 外框 */
 let hoverEl=null;
