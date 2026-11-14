@@ -62,62 +62,69 @@ function scanRanges(src){
 }
 
 /* ═══════════ 7. 序列化：DOM → 單引號屬性的 HTML（CaveDuck 建議格式）═══════════ */
-function serializeNode(node,rangeMap,posRef){
+/* 輸出時盡量照原本的寫法：
+   - &amp; / &lt; / &gt; / &nbsp; 不會被還原成裸字元（否則 &amp;lt; 會變成 &lt;，意思就變了）
+   - 原始碼沒寫 <tbody> 就不自動補上 */
+function serOptsFor(src){
+  src=src||'';
+  return { ampAll:/&amp;/.test(src), gt:/&gt;/.test(src), nbsp:/&nbsp;/.test(src)||!/\u00a0/.test(src), tbody:/<tbody[\s>]/i.test(src) };
+}
+/* 每個元素在原始碼裡是怎麼寫的（解析時記下來）：text＝內容的寫法、tag＝開頭標籤（屬性）的寫法、implied＝瀏覽器自動補的 */
+let SRC_INFO=new WeakMap();
+function rememberSrcInfo(src){
+  SRC_INFO=new WeakMap();
+  modelEls.forEach((el,i)=>{
+    const r=ranges[i];
+    if(!r){ SRC_INFO.set(el,{implied:true}); return; }
+    const whole=src.slice(r.start,r.end), gt=whole.indexOf('>');
+    const tag=gt<0?whole:whole.slice(0,gt+1);
+    SRC_INFO.set(el,{text:serOptsFor(whole),tag:serOptsFor(tag)});
+  });
+}
+function serAmp(s,o){ return o.ampAll?s.replace(/&/g,'&amp;'):s.replace(/&(?=#?[a-zA-Z0-9]+;)/g,'&amp;'); }
+function serText(s,o){
+  s=serAmp(s,o).replace(/</g,'&lt;');
+  if(o.gt) s=s.replace(/>/g,'&gt;');
+  if(o.nbsp) s=s.replace(/\u00a0/g,'&nbsp;');
+  return s;
+}
+function serAttr(s,o){
+  s=serAmp(s,o);
+  if(o.nbsp) s=s.replace(/\u00a0/g,'&nbsp;');
+  return s.replace(/'/g,'&#39;');
+}
+const SER_RAW=new Set(['script','style','xmp','iframe','noembed','noframes','plaintext']);
+function serializeNodes(nodes,rangeMap,opts){
+  const o=opts||serOptsFor(codeEl.value);
   let out='';
-  const P=posRef||{pos:0};
-  const emit=s=>{ out+=s; P.pos+=s.length; };
-  walk(node);
-  function walk(nd){
-    if(nd.nodeType===3){ emit(nd.nodeValue.replace(/</g,'&lt;')); return; }
-    if(nd.nodeType===8){ emit('<!--'+nd.nodeValue+'-->'); return; }
+  function walk(nd,raw){
+    if(nd.nodeType===3){ const pi=nd.parentNode&&SRC_INFO.get(nd.parentNode); out+=raw?nd.nodeValue:serText(nd.nodeValue,(pi&&pi.text)||o); return; }
+    if(nd.nodeType===8){ out+='<!--'+nd.nodeValue+'-->'; return; }
     if(nd.nodeType!==1) return;
-    const tag=nd.tagName.toLowerCase(); const start=P.pos;
+    const tag=nd.tagName.toLowerCase();
+    // 瀏覽器自動補的 <tbody>：原始碼沒有就不寫出來
+    const inf=SRC_INFO.get(nd);
+    if(tag==='tbody'&&!nd.attributes.length&&(inf?inf.implied:!o.tbody)){ for(const c of [...nd.childNodes]) walk(c,false); return; }
+    const ao=(inf&&inf.tag)||o;
+    const start=out.length;
     let open='<'+tag;
     for(const at of nd.attributes){
       if(at.name==='data-cdbuid') continue;
-      const v=at.value.replace(/'/g,'&#39;');
-      open+=' '+at.name+"='"+v+"'";
+      open+=' '+at.name+"='"+serAttr(at.value,ao)+"'";
     }
-    open+='>';
-    emit(open);
+    out+=open+'>';
     if(!VOID_TAGS.has(tag)){
-      for(const c of [...nd.childNodes]) walk(c);
-      emit('</'+tag+'>');
-    }
-    if(rangeMap) rangeMap.set(nd,{start,end:P.pos});
-  }
-  return out;
-}
-function serializeAll(rootFrag,rangeMap){
-  const P={pos:0}; let out='';
-  for(const c of [...rootFrag.childNodes]){ out+=serializeNode(c,rangeMap,{pos:out.length}); }
-  if(rangeMap){ /* ranges 已於各子樹內記錄（pos 基於各自起點）*/ }
-  return out;
-}
-/* 上面 serializeNode 逐子樹起點會重置，改用整體序列化以確保 range 正確 */
-function serializeDoc(rootFrag,rangeMap){
-  let out='';
-  const emit=s=>{ out+=s; };
-  function walk(nd){
-    if(nd.nodeType===3){ emit(nd.nodeValue.replace(/</g,'&lt;')); return; }
-    if(nd.nodeType===8){ emit('<!--'+nd.nodeValue+'-->'); return; }
-    if(nd.nodeType!==1) return;
-    const tag=nd.tagName.toLowerCase(); const start=out.length;
-    let open='<'+tag;
-    for(const at of nd.attributes){
-      if(at.name==='data-cdbuid') continue;
-      open+=' '+at.name+"='"+at.value.replace(/'/g,'&#39;')+"'";
-    }
-    emit(open+'>');
-    if(!VOID_TAGS.has(tag)){
-      for(const c of [...nd.childNodes]) walk(c);
-      emit('</'+tag+'>');
+      const r=SER_RAW.has(tag);
+      for(const c of [...nd.childNodes]) walk(c,r);
+      out+='</'+tag+'>';
     }
     if(rangeMap) rangeMap.set(nd,{start,end:out.length});
   }
-  for(const c of [...rootFrag.childNodes]) walk(c);
+  for(const c of nodes) walk(c,false);
   return out;
 }
+function serializeNode(node,rangeMap){ return serializeNodes([node],rangeMap); }
+function serializeDoc(rootFrag,rangeMap){ return serializeNodes([...rootFrag.childNodes],rangeMap); }
 
 /* ═══════════ 8. 狀態 ═══════════ */
 const codeEl=$('#code'), pv=$('#pv');
@@ -134,6 +141,30 @@ function pushUndo(){ const v=codeEl.value; if(undoStack[undoStack.length-1]!==v)
 function doUndo(){ if(!undoStack.length){ toast('沒有可復原的步驟'); return; } redoStack.push(codeEl.value); const v=undoStack.pop(); codeEl.value=v; parseAndRender(); toast('<b>已復原</b>'); }
 function doRedo(){ if(!redoStack.length){ toast('沒有可重做的步驟'); return; } undoStack.push(codeEl.value); const v=redoStack.pop(); codeEl.value=v; parseAndRender(); toast('<b>已重做</b>'); }
 
+/* 把「DOM 裡的元素」和「原始碼掃到的標籤」對起來。
+   兩邊不一定一樣多：瀏覽器會自動補標籤（tbody）、也會丟掉放錯位置的標籤。
+   對不上時往兩邊各找一小段，挑「兩邊跳過最少」而且後面也接得上的位置重新對齊。 */
+function alignRanges(scan){
+  const dom=modelEls.map(e=>e.tagName.toLowerCase());
+  const N=dom.length, M=scan.length, W=16;
+  let ei=0, si=0;
+  const same=(a,b)=>ei+a<N&&si+b<M&&dom[ei+a]===scan[si+b].tag;
+  while(ei<N&&si<M){
+    if(dom[ei]===scan[si].tag){ ranges[ei]={start:scan[si].start,end:scan[si].end}; ei++; si++; continue; }
+    let best=null, weak=null;
+    for(let sum=1;sum<=W*2&&!best;sum++){
+      for(let a=Math.min(sum,W);a>=0;a--){
+        const b=sum-a; if(b>W||!same(a,b)) continue;
+        const end=ei+a+1>=N||si+b+1>=M;
+        if(end||same(a+1,b+1)){ best=[a,b]; break; }
+        if(!weak) weak=[a,b];
+      }
+    }
+    best=best||weak; if(!best) break;
+    ei+=best[0]; si+=best[1];
+  }
+}
+
 /* ═══════════ 9. 解析＋淨化＋渲染 ═══════════ */
 function parseAndRender(keepSel){
   if(editingText) return; // 文字就地編輯中不重繪
@@ -148,13 +179,8 @@ function parseAndRender(keepSel){
   // 9.2 範圍對齊（掃描器 → 依序配對同名標籤）
   const scan=scanRanges(src);
   ranges=new Array(modelEls.length).fill(null);
-  let si=0;
-  for(let ei=0;ei<modelEls.length;ei++){
-    const t=modelEls[ei].tagName.toLowerCase();
-    let found=-1;
-    for(let k=si;k<Math.min(scan.length,si+4);k++){ if(scan[k].tag===t){found=k;break;} }
-    if(found>=0){ ranges[ei]={start:scan[found].start,end:scan[found].end}; si=found+1; }
-  }
+  alignRanges(scan);
+  rememberSrcInfo(src);
   // 9.3 建立預覽：照平台流程（DOMPurify 3.3.3 ＋ marked，和 CaveDuck 相同）
   const {frag:clone,rep}=cdPlatformRender(model,modelEls);
   uid2clone=new Map();
@@ -254,17 +280,11 @@ function codeRects(start,end){
   ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','whiteSpace','wordBreak','overflowWrap','textIndent'].forEach(k=>m.style[k]=cs[k]);
   m.style.width=codeEl.clientWidth+'px';
   m.textContent=v.slice(0,start);
-  const sp=document.createElement('span'); sp.textContent=v.slice(start,end)||'​'; m.appendChild(sp);
+  const sp=document.createElement('span'); sp.textContent=v.slice(start,end)||'\u200b'; m.appendChild(sp);
   m.appendChild(document.createTextNode(v.slice(end,end+400)));
   const mr=m.getBoundingClientRect();
   const lh=parseFloat(cs.lineHeight)||19;
   return {lh,rects:[...sp.getClientRects()].filter(r=>r.width>0||r.height>0).map(r=>({x:r.left-mr.left,y:r.top-mr.top,w:r.width,h:r.height}))};
-}
-/* 開標籤的結尾（跳過引號裡的 >） */
-function openTagEnd(start,end){
-  const v=codeEl.value; let q=null;
-  for(let j=start;j<end;j++){ const c=v[j]; if(q){ if(c===q) q=null; } else if(c==="'"||c==='"') q=c; else if(c==='>') return j+1; }
-  return end;
 }
 /* 把 code 捲到看得到 start~end 的地方（上下、左右都會捲） */
 function revealCode(start,end,m){
@@ -284,10 +304,9 @@ function placeCodeFlash(){
   fl.style.top=codeEl.offsetTop+'px'; fl.style.left=codeEl.offsetLeft+'px';
   fl.style.width=codeEl.clientWidth+'px'; fl.style.height=codeEl.clientHeight+'px';
   const sx=codeEl.scrollLeft, sy=codeEl.scrollTop;
-  const band=fl.firstElementChild;
-  band.style.top=(flashGeo.top-sy)+'px'; band.style.height=(flashGeo.bot-flashGeo.top)+'px';
-  [...fl.children].slice(1).forEach((d,i)=>{ const r=flashGeo.tag[i]; if(!r) return; d.style.left=(r.x-sx-2)+'px'; d.style.top=(r.y-sy)+'px'; d.style.width=(r.w+4)+'px'; d.style.height=r.h+'px'; });
+  [...fl.children].forEach((d,i)=>{ const r=flashGeo[i]; if(!r) return; d.style.left=(r.x-sx-2)+'px'; d.style.top=(r.y-sy)+'px'; d.style.width=(r.w+4)+'px'; d.style.height=r.h+'px'; });
 }
+/* 選到的元素：從開頭標籤到結尾標籤整段發光（跨行就每行一段，上下相連） */
 function flashCodeLine(start,end){
   if($('#stage').classList.contains('codeClosed')) return;
   const fl=$('#codeFlash'); if(!fl) return;
@@ -295,10 +314,9 @@ function flashCodeLine(start,end){
     if(end>codeEl.value.length||!codeEl.clientHeight) return;
     const whole=codeRects(start,end); if(!whole.rects.length) return;
     revealCode(start,end,whole);
-    const rs=whole.rects, half=(whole.lh-rs[0].h)/2;
-    const tag=codeRects(start,openTagEnd(start,end)).rects;
-    flashGeo={top:rs[0].y-half, bot:rs[rs.length-1].y+rs[rs.length-1].h+half, tag};
-    fl.replaceChildren(document.createElement('b'),...tag.map(()=>document.createElement('i')));
+    const half=(whole.lh-whole.rects[0].h)/2;
+    flashGeo=whole.rects.slice(0,800).map(r=>({x:r.x,y:r.y-half,w:r.w,h:whole.lh}));
+    fl.replaceChildren(...flashGeo.map(()=>document.createElement('i')));
     placeCodeFlash();
     fl.classList.add('on');
     clearTimeout(flashTimer); flashTimer=setTimeout(()=>{ fl.classList.remove('on'); },900);

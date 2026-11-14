@@ -50,7 +50,7 @@ function populateProps(){
   $('#inAnim').value=animName;
   const customDur=cssSec(animEl.style.animationDuration);
   $('#inAnimSpeed').value=customDur?'custom':(cls.find(x=>['animate__slow','animate__slower','animate__fast','animate__faster'].includes(x))||'');
-  $('#animDur').value=customDur||SPEED_SEC[$('#inAnimSpeed').value]||1;
+  $('#animDur').value=customDur||presetSec($('#inAnimSpeed').value,animName);
   $('#inAnimInf').checked=cls.includes('animate__infinite');
   $('#inStyle').value=n.getAttribute('style')||'';
   renderDecoColors();
@@ -152,6 +152,10 @@ const POS_PROPS=['position','top','left','right','bottom','width','height','max-
 function hasAnimCls(n){ return /(^|\s)animate__/.test(n.getAttribute('class')||''); }
 /* 動畫時長：預設速度用 class；自訂秒數寫成行內 animation-duration */
 const SPEED_SEC={'':1,'animate__slow':2,'animate__slower':3,'animate__fast':0.8,'animate__faster':0.5};
+/* animate.css 有些動畫本身帶倍率（例：心跳是 1.3 倍），「時長」欄顯示實際秒數 */
+const ANIM_MULT={heartBeat:1.3,bounceIn:0.75,bounceOut:0.75,flipOutX:0.75,flipOutY:0.75,hinge:2};
+// 倍率只在「預設速度」時有效；選了 2 秒／3 秒／0.8 秒／0.5 秒，animate.css 會直接蓋掉倍率
+function presetSec(speed,name){ return speed?(SPEED_SEC[speed]||1):(ANIM_MULT[name]||1); }
 function cssSec(v){ const m=/^\s*([\d.]+)\s*(ms|s)\s*$/.exec(v||''); if(!m) return 0; const n=parseFloat(m[1])/(m[2]==='ms'?1000:1); return n>0?Math.round(n*1000)/1000:0; }
 function animElOf(n){ return hasAnimCls(n)?n:((n.children.length===1&&hasAnimCls(n.firstElementChild))?n.firstElementChild:n); }
 function dropStyleProp(el,prop){ el.style.removeProperty(prop); if(!(el.getAttribute('style')||'').trim()) el.removeAttribute('style'); }
@@ -222,7 +226,7 @@ $('#inAnim').addEventListener('change',propAnimChanged);
 $('#inAnimSpeed').addEventListener('change',()=>{
   const v=$('#inAnimSpeed').value;
   if(v==='custom'){ const d=$('#animDur'); try{ d.focus(); d.select(); }catch(e){} }
-  else $('#animDur').value=SPEED_SEC[v]||1;
+  else $('#animDur').value=presetSec(v,$('#inAnim').value);
   propAnimChanged();
 });
 /* 時長：手動輸入秒數（剛好等於預設速度就用 class，其他寫成 animation-duration） */
@@ -231,7 +235,7 @@ $('#animDur').addEventListener('change',()=>{
   if(!(v>0)) v=1;
   v=Math.min(600,Math.max(0.05,Math.round(v*100)/100));
   d.value=v;
-  const preset=Object.keys(SPEED_SEC).find(k=>SPEED_SEC[k]===v);
+  const preset=Object.keys(SPEED_SEC).find(k=>presetSec(k,$('#inAnim').value)===v);
   $('#inAnimSpeed').value=preset!=null?preset:'custom';
   propAnimChanged();
 });
